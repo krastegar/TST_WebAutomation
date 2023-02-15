@@ -9,6 +9,8 @@ from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class DI_Search(IMM, SetUp): 
 
@@ -37,11 +39,11 @@ class DI_Search(IMM, SetUp):
     def webTST_scrape(self, driver, di_num_list, i):
         di_num = int(di_num_list[i])
             
-            # navigating to disease incidents tab
+        # navigating to disease incidents tab
         DI_tab = driver.find_element(By.ID, 'ibtnTabDisInc')
         DI_tab.click()
             
-            # Searching for specific disease incident 
+        # Searching for specific disease incident 
         di_search_box = 'txtFindDisInc'
         DI_search = driver.find_element(By.ID, di_search_box)
         DI_search.send_keys(str(di_num))
@@ -113,7 +115,7 @@ class DI_Search(IMM, SetUp):
             
             # Resulted Test
         resulted_test = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtResultedTestL")
+                                "_-11_ctl03_dgLabInfo_ctl02_txtResultedTest")
             
             # result
         result = self.extract_info(driver,
@@ -285,6 +287,8 @@ class DI_Search(IMM, SetUp):
         Function is meant to extract information from text boxes, 
         using the elements ID as a identifier. 
         '''
-        element_btn = driver.find_element(By.ID, element_id)
+        wait = WebDriverWait(driver, 5)
+        wait.until(EC.presence_of_element_located((By.ID, element_id)))
+        element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
         value = element_btn.get_attribute('value')
         return value

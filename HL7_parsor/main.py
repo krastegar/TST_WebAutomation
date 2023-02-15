@@ -10,7 +10,7 @@ def main():
         username = 'krastegar',
         paswrd = 'Hamid&Mahasty1',
         FromDate='01/11/2023',
-        ToDate='02/08/2023',
+        ToDate='01/15/2023',
         LabName="Sharp Rees-Stealy Clinics Lab (Genetic Center)"
         )
     di = report.hl7_copy()
