@@ -1,0 +1,199 @@
+import os
+import pandas as pd 
+import re
+
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from DI_Incident import DI_Search
+from IMM import IMM
+
+
+class HL7_extraction(DI_Search, IMM):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        return
+    
+    def hl7_copy(self):
+        '''
+        In the final version I wll have disease_search in this method 
+        '''
+        
+        # Go into incoming message monitor 
+        # driver = self.imm_menu() # for testing code
+
+        # getting the accession numbers
+        # df = self.export_df() # for testing code
+        driver, df, webCMR_values, webCMR_indicies = self.disease_search()
+        #_ = self.imm_menu()
+        acc_num_list : list = list(df['DILR_AccessionNumber'])
+        
+        # Resulted test list for searches 
+        test_list : list  = list(df['DILR_ResultedTest'])
+        wait = WebDriverWait(driver, 10)
+        for i in range(len(acc_num_list)):
+            print(f'\nITERATION #: {i}')
+            try: 
+                try: 
+                    # Searching IMM for specific accession numbers 
+                    # Going to have to put this in a for loop 
+                    acc_num : int = int(acc_num_list[i])
+                    resultTest : str = str(test_list[i])
+                    acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
+
+                    # Copy and filter hl7 results
+                    hl7_table = self.data_wrangling(driver, resultTest, acc_num)
+                
+                except StaleElementReferenceException as e:
+
+                    # seaching accession and resulted test again 
+                    acc_num : int = int(acc_num_list[i])
+                    resultTest : str = str(test_list[i])
+                    acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
+                    
+                    # Copy and filter hl7 results
+                    hl7_table = self.data_wrangling(driver, resultTest, acc_num)
+
+            except StaleElementReferenceException as e:
+                continue 
+
+    def acc_test_search(self, wait, acc_num, resultTest):
+        acc_box = wait.until(EC.presence_of_element_located((By.ID, 'txtAccession')))
+        acc_box.clear()
+        acc_box.send_keys(str(acc_num))
+        test_search = wait.until(EC.presence_of_element_located((By.ID, 'txtResultedTest')))
+        test_search.clear()
+        test_search.send_keys(resultTest)
+        search_id = 'ibtnSearch'
+        search_btn = wait.until(EC.presence_of_element_located((By.ID, search_id)))
+        search_btn.click()
+        return acc_box,test_search
+
+    def data_wrangling(self, driver, resultTest, acc_num): 
+        # Get HL7 from contents area after IMM search 
+        table = driver.find_element(By.ID, "divContentsArea").text
+        hl7_sections = table.split('\n')
+        components = [section.split("|") for section in hl7_sections]
+        df = pd.DataFrame(components)
+        
+        obx_indx, obr_indx, spm_indx = [], [], []
+        for index, section in enumerate(list(df[0].values)):
+            if section == 'OBR':
+                obr_indx.append(index)
+            elif section == 'OBX': 
+                obx_indx.append(index)
+            elif section == 'SPM': 
+                spm_indx.append(index)
+            else: continue 
+        
+        #print(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
+        
+        try:
+            assert len(obr_indx) == len(obx_indx) == len(spm_indx)
+            # Going to check which OBX test result matches the imported test result
+            column = 3 # OBX 3 is the column that contains resulted test 
+            key = self.match_obx(resultTest, df, obx_indx, column)
+            pos = obx_indx.index(key)
+            df_idx = [obr_indx[pos], obx_indx[pos], spm_indx[pos]]
+        except AssertionError:
+            column = 3
+            key = self.match_obx(resultTest, df, obx_indx, column)
+            pos = obx_indx.index(key)
+            if len(obr_indx) < len(obx_indx): 
+                df_idx = [obr_indx[0], obx_indx[pos], spm_indx[pos]]
+            elif len(spm_indx) < len(obx_indx): 
+                df_idx = [obr_indx[pos], obx_indx[pos], spm_indx[0]]
+            else: pass 
+        
+        sections : list = list(df[0].values)
+        # not sure if there is going to be more than one ORC section, 
+        # Marjorie seemed hesistant around this 
+        obr_cnt = 0
+        for sect in sections: 
+            if sect == 'ORC': 
+                obr_cnt+=1
+                df_idx.append(sections.index(sect))
+                if obr_cnt > 1: 
+                    raise ValueError('Duplicate ORC Sections')
+            elif sect == 'PID': 
+                df_idx.append(sections.index(sect))
+            else: pass 
+        
+        # making pandas df with only rows related to ResultedTest of interest
+        oneResult_df = df.iloc[df_idx]
+        oneResult_df.set_index(0, inplace=True)
+        
+        #report = self.hl7_report(resultTest, acc_num, oneResult_df)
+        # print(f'name column: {name}')
+        # going to extract values from hl7
+        name = oneResult_df.loc['PID', 5]
+        dob = oneResult_df.loc['PID', 7]
+        race = oneResult_df.loc['PID', 10]
+        ethnicity = oneResult_df.loc['PID', 22]
+        address = oneResult_df.loc['PID', 11]
+        phone_number = oneResult_df.loc['PID', 13]
+        gender = oneResult_df.loc['PID', 8]
+        accession = self.get_accession(oneResult_df.loc['SPM', 2])
+        specimen_collect = self.check_specimenCollect(oneResult_df)
+        specimen_receive = oneResult_df.loc['SPM', 18]
+        specimen_source = oneResult_df.loc['SPM', 4]
+        resulted_test = oneResult_df.loc['OBX', 3]
+        result_resultOrganism = oneResult_df.loc['OBX', 5]
+        units = oneResult_df.loc['OBX', 6]
+        ref_range = oneResult_df.loc['OBX', 7]
+        result_date = oneResult_df.loc['OBX', 19]
+        performing_facility_ID = oneResult_df.loc['OBX', 23]
+        ab_flag = oneResult_df.loc['OBX', 8]
+        ob_results = oneResult_df.loc['OBX', 11]
+        provider_name = oneResult_df.loc['ORC', 12]
+        provider_phone = oneResult_df.loc['ORC', 14]
+        provider_address = oneResult_df.loc['ORC', 24]
+        facility_name = oneResult_df.loc['ORC', 21]
+        facility_address = oneResult_df.loc['ORC', 22]
+        
+        return
+    
+    def get_accession(self, string ):
+        'Return first part of SPM 2 that is seen before accession #'
+        return string.split('&', 1)[0]
+
+    def check_specimenCollect(self, df):
+        spm, obx, obr = df.loc['SPM', 17], df.loc['OBX', 14], df.loc['OBR', 7]
+        if spm == obx == obr:
+            sp_collect = spm
+        elif spm == obx:
+            sp_collect = f'SPM-17 & OBX-14 is {obx}, while OBR-7 is {obr}'
+        elif spm == obr:
+            sp_collect = f'SPM-17 & OBR-7 is {spm}, while OBR-7 is {obx}'
+        elif obx == obr:
+            sp_collect = f'OBX-14 & OBR-7 is {obr}, while SPM-17 is {spm}'
+        else:
+            sp_collect=f"""
+            All variables are different.
+            SPM-17: {spm}
+            OBX-14: {obx}
+            OBR-7: {obr}
+            """
+        return sp_collect
+
+    def hl7_report(self, resultTest, acc_num, df):
+        home_directory = os.path.expanduser( '~' )
+        new_dir = f'{home_directory}/Desktop/hl7_test/'
+        try:
+            mkdir = os.mkdir(new_dir)
+        except FileExistsError:
+            pass 
+        file_name = re.sub(r'[^\w\s]+', '_', resultTest)
+        file_dir = f'{new_dir}/{file_name}'
+        df.to_excel(f'{file_dir}_ACCnum_{acc_num}.xlsx')
+
+    def match_obx(self, resultTest, df, obx_indx, column):
+        key : int = 0
+        for row_index in obx_indx: 
+            obx_result : str = str(df.iloc[row_index, column])
+            if resultTest in obx_result:
+                # print(f'Found the Index: {row_index}') 
+                key = int(row_index)
+        return key
