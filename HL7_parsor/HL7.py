@@ -1,6 +1,7 @@
 import os
 import pandas as pd 
 import re
+import numpy as np
 
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
@@ -41,30 +42,64 @@ class HL7_extraction(DI_Search, IMM):
                 try: 
                     # Searching IMM for specific accession numbers 
                     # Going to have to put this in a for loop 
-                    acc_num : int = int(acc_num_list[i])
-                    resultTest : str = str(test_list[i])
-                    
+                    acc_num = int(acc_num_list[i])
+                    resultTest = str(test_list[i])
+                    di_num = int(di_num_list[i])
                     acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
 
                     # Copy and filter hl7 results
-                    hl7_values = self.data_wrangling(driver, resultTest, acc_num)
+                    hl7_values, hl7_section_labels = self.data_wrangling(driver, resultTest, acc_num)
                     
+                    # get webCMR values
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
-                
+                    print(
+                        f'''
+                        printing lengths: 
+                        webCMR_values = {len(webCMR_values)}
+                        webCMR_indicies = {len(webCMR_indicies)}
+                        hl7_values = {len(hl7_values)}, 
+                        hl7_sections = {len(hl7_section_labels)}
+                        '''
+                    )
+                    # make summary df
+
+                    webCMR_hl7_df = pd.DataFrame(
+                        data=np.array([webCMR_values,hl7_values, hl7_section_labels]).T, 
+                        columns=['TSTWebCMR Data', 'HL7 Data', 'HL7 Section'], 
+                        index=webCMR_indicies
+                        )
+
+                    # make summarry report 
+                    report = self.hl7_report(resultTest, acc_num, di_num,webCMR_hl7_df)
+                    
                 except StaleElementReferenceException as e:
 
                     # seaching accession and resulted test again 
-                    acc_num : int = int(acc_num_list[i])
-                    resultTest : str = str(test_list[i])
+                    acc_num = int(acc_num_list[i])
+                    resultTest = str(test_list[i])
+                    di_num = int(di_num_list[i])
                     acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
                     
                     # Copy and filter hl7 results
-                    hl7_table = self.data_wrangling(driver, resultTest, acc_num)
+                    hl7_values, hl7_section_labels = self.data_wrangling(driver, resultTest, acc_num)
 
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
+                    
+                    # make summary df
 
+                    webCMR_hl7_df = pd.DataFrame(
+                        data=np.array([webCMR_values,hl7_values, hl7_section_labels]).T, 
+                        columns=['TSTWebCMR Data', 'HL7 Data', 'HL7 Section'], 
+                        index=webCMR_indicies
+                        )
+                    # produce report 
+                    report = self.hl7_report(resultTest, acc_num, webCMR_hl7_df)
             except StaleElementReferenceException as e:
-                continue 
+                continue
+        home_directory = os.path.expanduser( '~' )
+        new_dir = f'{home_directory}/Desktop/hl7_test'
+        query_df = df.to_excel(f'{new_dir}/query.xlsx')
+    
 
     def acc_test_search(self, wait, acc_num, resultTest):
         acc_box = wait.until(EC.presence_of_element_located((By.ID, 'txtAccession')))
@@ -132,7 +167,6 @@ class HL7_extraction(DI_Search, IMM):
         oneResult_df = df.iloc[df_idx]
         oneResult_df.set_index(0, inplace=True)
         
-        #report = self.hl7_report(resultTest, acc_num, oneResult_df)
         # print(f'name column: {name}')
         # going to extract values from hl7
         name = oneResult_df.loc['PID', 5]
@@ -147,7 +181,8 @@ class HL7_extraction(DI_Search, IMM):
         specimen_receive = oneResult_df.loc['SPM', 18]
         specimen_source = oneResult_df.loc['SPM', 4]
         resulted_test = oneResult_df.loc['OBX', 3]
-        result_resultOrganism = oneResult_df.loc['OBX', 5]
+        result = oneResult_df.loc['OBX', 5]
+        resulted_organism = 'If there is one it is in Result section'
         units = oneResult_df.loc['OBX', 6]
         ref_range = oneResult_df.loc['OBX', 7]
         result_date = oneResult_df.loc['OBX', 19]
@@ -159,6 +194,36 @@ class HL7_extraction(DI_Search, IMM):
         provider_address = oneResult_df.loc['ORC', 24]
         facility_name = oneResult_df.loc['ORC', 21]
         facility_address = oneResult_df.loc['ORC', 22]
+        facility_phone = oneResult_df.loc['ORC', 23]
+
+        hl7_section_label = [
+            'PID-5',
+            'PID-7',
+            'PID-10',
+            'PID-22',
+            'PID-11',
+            'PID-13',
+            'PID-8',
+            'SPM-2',
+            'SPM-17, OBR-7, OBX-14',
+            'SPM-18',
+            'SPM-4', 
+            'OBX-3',
+            'OBX-5', 
+            'N/A',
+            'OBX-6',
+            'OBX-7',
+            'OBX-19',
+            'OBX-23',
+            'OBX-8',
+            'OBX-11',
+            'ORC-12',
+            'ORC-14',
+            'ORC-24',
+            'ORC-21',
+            'ORC-22',
+            'ORC-23'
+        ]
         
         hl7_values = [
             name,
@@ -173,24 +238,26 @@ class HL7_extraction(DI_Search, IMM):
             specimen_receive,
             specimen_source,
             resulted_test,
-            result_resultOrganism,
+            result,
+            resulted_organism,
             units,
             ref_range,
             result_date,
-            performing_facility_ID,
             ab_flag,
             ob_results,
             provider_name,
-            provider_phone,
             provider_address,
+            provider_phone,
+            performing_facility_ID,
             facility_name, 
-            facility_address
+            facility_address,
+            facility_phone
         ]
         # Need to return home so that we can go to disease tab next 
         home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
         home_btn.click()
 
-        return hl7_values
+        return hl7_values, hl7_section_label
     
     def get_accession(self, string ):
         'Return first part of SPM 2 that is seen before accession #'
@@ -215,7 +282,7 @@ class HL7_extraction(DI_Search, IMM):
             """
         return sp_collect
 
-    def hl7_report(self, resultTest, acc_num, df):
+    def hl7_report(self, resultTest, acc_num, di_num,df):
         home_directory = os.path.expanduser( '~' )
         new_dir = f'{home_directory}/Desktop/hl7_test/'
         try:
@@ -224,7 +291,7 @@ class HL7_extraction(DI_Search, IMM):
             pass 
         file_name = re.sub(r'[^\w\s]+', '_', resultTest)
         file_dir = f'{new_dir}/{file_name}'
-        df.to_excel(f'{file_dir}_ACCnum_{acc_num}.xlsx')
+        df.to_excel(f'{file_dir}_ACCnum_{acc_num}_DInum_{di_num}.xlsx')
 
     def match_obx(self, resultTest, df, obx_indx, column):
         key : int = 0

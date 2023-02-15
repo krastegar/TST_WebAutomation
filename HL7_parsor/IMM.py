@@ -184,7 +184,7 @@ class IMM(SetUp):
         
         # Combine dataframe 
         final_df = pd.concat([categorical_df, num_error], ignore_index=True)
-        final_df.to_excel('test.xlsx')
+        # final_df.to_excel('test.xlsx')
 
         return final_df
 

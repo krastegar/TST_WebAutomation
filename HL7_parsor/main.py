@@ -1,6 +1,5 @@
 import sys
 
-from DI_Incident import DI_Search
 from HL7 import HL7_extraction
 
 
@@ -10,9 +9,9 @@ def main():
     report = HL7_extraction(
         username = 'krastegar',
         paswrd = 'Hamid&Mahasty1',
-        FromDate='01/18/2023',
-        ToDate='01/18/2023',
-        LabName="LOGAN HEIGHTS FAMILY HEALTH CENTER LAB NEW"
+        FromDate='01/11/2023',
+        ToDate='02/08/2023',
+        LabName="Sharp Rees-Stealy Clinics Lab (Genetic Center)"
         )
     di = report.hl7_copy()
     
