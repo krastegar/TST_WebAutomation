@@ -36,6 +36,9 @@ class IMM(SetUp):
         return driver 
 
     def nav2IMM(self, driver):
+        '''
+        Only works if you are at the home page and want to navigate to IMM menu
+        '''
         wait = WebDriverWait(driver, 8)
         dropdown_menu = wait.until(EC.presence_of_element_located((By.ID, "FragTop1_mnuMain-menuItem017")))
         dropdown_menu.click()
@@ -82,7 +85,8 @@ class IMM(SetUp):
     def imm_export(self): 
         '''
         Method is used after completing the search for specific lab and exporting
-        all the results as an excel workbook and looking up those results in TST system
+        all the results as an excel workbook and looking up those results in TST system.
+        **Takes you back to the home page after excel workbook is downloaded
         '''
         driver = self.imm_search()
         
@@ -128,7 +132,8 @@ class IMM(SetUp):
             else: 
                 break 
         # driver.quit()
-        
+        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
+        home_btn.click()
         return driver
 
     def download_folder(self):

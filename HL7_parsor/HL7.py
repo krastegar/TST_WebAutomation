@@ -21,17 +21,19 @@ class HL7_extraction(DI_Search, IMM):
         In the final version I wll have disease_search in this method 
         '''
         
-        # Go into incoming message monitor 
-        # driver = self.imm_menu() # for testing code
+        # Going into IMM Menu and Downloading excel sheet 
+        driver = self.imm_export()
 
-        # getting the accession numbers
-        # df = self.export_df() # for testing code
-        driver, df, webCMR_values, webCMR_indicies = self.disease_search()
-        #_ = self.imm_menu()
-        acc_num_list : list = list(df['DILR_AccessionNumber'])
+        # Getting Disease Queries and Hl7 accession # from excel sheet
+        df = self.export_df()
         
+        # Navigate to IMM menu after export
+        _ = self.nav2IMM(driver)
+
+        acc_num_list = list(df['DILR_AccessionNumber'])
+        di_num_list = list(df['DILR_IncidentID'])
         # Resulted test list for searches 
-        test_list : list  = list(df['DILR_ResultedTest'])
+        test_list = list(df['DILR_ResultedTest'])
         wait = WebDriverWait(driver, 10)
         for i in range(len(acc_num_list)):
             print(f'\nITERATION #: {i}')
@@ -41,10 +43,13 @@ class HL7_extraction(DI_Search, IMM):
                     # Going to have to put this in a for loop 
                     acc_num : int = int(acc_num_list[i])
                     resultTest : str = str(test_list[i])
+                    
                     acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
 
                     # Copy and filter hl7 results
-                    hl7_table = self.data_wrangling(driver, resultTest, acc_num)
+                    hl7_values = self.data_wrangling(driver, resultTest, acc_num)
+                    
+                    webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
                 
                 except StaleElementReferenceException as e:
 
@@ -55,6 +60,8 @@ class HL7_extraction(DI_Search, IMM):
                     
                     # Copy and filter hl7 results
                     hl7_table = self.data_wrangling(driver, resultTest, acc_num)
+
+                    webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
 
             except StaleElementReferenceException as e:
                 continue 
@@ -153,7 +160,37 @@ class HL7_extraction(DI_Search, IMM):
         facility_name = oneResult_df.loc['ORC', 21]
         facility_address = oneResult_df.loc['ORC', 22]
         
-        return
+        hl7_values = [
+            name,
+            dob,
+            race,
+            ethnicity,
+            address,
+            phone_number,
+            gender,
+            accession,
+            specimen_collect,
+            specimen_receive,
+            specimen_source,
+            resulted_test,
+            result_resultOrganism,
+            units,
+            ref_range,
+            result_date,
+            performing_facility_ID,
+            ab_flag,
+            ob_results,
+            provider_name,
+            provider_phone,
+            provider_address,
+            facility_name, 
+            facility_address
+        ]
+        # Need to return home so that we can go to disease tab next 
+        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
+        home_btn.click()
+
+        return hl7_values
     
     def get_accession(self, string ):
         'Return first part of SPM 2 that is seen before accession #'
