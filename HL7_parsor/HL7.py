@@ -97,8 +97,9 @@ class HL7_extraction(DI_Search, IMM):
             except StaleElementReferenceException as e:
                 continue
         home_directory = os.path.expanduser( '~' )
-        new_dir = f'{home_directory}/Desktop/hl7_test'
-        query_df = df.to_excel(f'{new_dir}/query.xlsx')
+        lab_name = re.sub(r'[^\w\s]+', '_',self.lab)
+        new_dir = f'{home_directory}/Desktop/{lab_name}'
+        query_df = df.to_excel(f'{new_dir}/query_summary.xlsx')
     
 
     def acc_test_search(self, wait, acc_num, resultTest):
@@ -130,7 +131,7 @@ class HL7_extraction(DI_Search, IMM):
                 spm_indx.append(index)
             else: continue 
         
-        #print(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
+        print(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
         
         try:
             assert len(obr_indx) == len(obx_indx) == len(spm_indx)
@@ -143,10 +144,12 @@ class HL7_extraction(DI_Search, IMM):
             column = 3
             key = self.match_obx(resultTest, df, obx_indx, column)
             pos = obx_indx.index(key)
-            if len(obr_indx) < len(obx_indx): 
-                df_idx = [obr_indx[0], obx_indx[pos], spm_indx[pos]]
-            elif len(spm_indx) < len(obx_indx): 
+            if len(spm_indx) < len(obx_indx) and len(obr_indx) < len(obx_indx): 
+                df_idx = [obr_indx[0], obx_indx[pos], spm_indx[0]]
+            elif len(spm_indx) < len(obx_indx) and len(obr_indx) == len(obx_indx): 
                 df_idx = [obr_indx[pos], obx_indx[pos], spm_indx[0]]
+            elif len(obr_indx) < len(obx_indx) and len(spm_indx)==len(obx_indx): 
+                df_idx = [obr_indx[0], obx_indx[pos], spm_indx[pos]]
             else: pass 
         
         sections : list = list(df[0].values)
@@ -284,7 +287,8 @@ class HL7_extraction(DI_Search, IMM):
 
     def hl7_report(self, resultTest, acc_num, di_num,df):
         home_directory = os.path.expanduser( '~' )
-        new_dir = f'{home_directory}/Desktop/hl7_test/'
+        lab_name = re.sub(r'[^\w\s]+', '_',self.lab)
+        new_dir = f'{home_directory}/Desktop/{lab_name}/'
         try:
             mkdir = os.mkdir(new_dir)
         except FileExistsError:

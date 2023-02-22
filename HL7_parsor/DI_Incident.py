@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 class DI_Search(IMM, SetUp): 
 
@@ -115,7 +116,7 @@ class DI_Search(IMM, SetUp):
             
             # Resulted Test
         resulted_test = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtResultedTest")
+                                "_-11_ctl03_dgLabInfo_ctl02_txtResultedTestL")
             
             # result
         result = self.extract_info(driver,
@@ -287,8 +288,27 @@ class DI_Search(IMM, SetUp):
         Function is meant to extract information from text boxes, 
         using the elements ID as a identifier. 
         '''
-        wait = WebDriverWait(driver, 5)
-        wait.until(EC.presence_of_element_located((By.ID, element_id)))
-        element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
-        value = element_btn.get_attribute('value')
+        wait = WebDriverWait(driver, 2)
+        # try-except block is meant to catch the off scenario of resulted test ID being different for 
+        # different labs 
+        try: 
+            element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
+            value = element_btn.get_attribute('value')
+        except  TimeoutException: 
+            # issues with resulted test on resulted test
+            try:
+                element_id = '_-11_ctl03_dgLabInfo_ctl02_txtResultedTest'
+                element_btn = driver.find_element(By.ID, element_id)
+                value = element_btn.get_attribute('value')
+            except NoSuchElementException:
+                # issues with resulted organism 
+                try:
+                    element_id = '_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganismL'
+                    element_btn = driver.find_element(By.ID, element_id)
+                    value = element_btn.get_attribute('value')
+                except  NoSuchElementException:
+                    print(f"Cant find the element {element_id}")
+
+
+
         return value

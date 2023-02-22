@@ -5,14 +5,16 @@ from HL7 import HL7_extraction
 
 def main(): 
 
+    # user = input("Please Enter username credintials for ")
     # Login and go to staging area
     report = HL7_extraction(
         username = 'krastegar',
         paswrd = 'Hamid&Mahasty1',
-        FromDate='01/11/2023',
-        ToDate='01/15/2023',
-        LabName="Sharp Rees-Stealy Clinics Lab (Genetic Center)"
+        FromDate='02/13/2023',
+        ToDate='02/22/2023',
+        LabName="Palomar Health Downtown Campus Laboratory NEW"
         )
+    # setup = report.install()
     di = report.hl7_copy()
     
     '''
