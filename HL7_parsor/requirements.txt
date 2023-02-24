@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements.txt requirements.in
 #
+altgraph==0.17.3
+    # via pyinstaller
 async-generator==1.10
     # via
     #   trio
@@ -12,20 +14,40 @@ attrs==22.2.0
     # via
     #   outcome
     #   trio
+auto-py-to-exe==2.30.0
+    # via -r requirements.in
+bottle==0.12.24
+    # via
+    #   bottle-websocket
+    #   eel
+bottle-websocket==0.2.9
+    # via eel
 certifi==2022.12.7
     # via
     #   requests
     #   selenium
 cffi==1.15.1
-    # via trio
+    # via
+    #   gevent
+    #   trio
 charset-normalizer==3.0.1
     # via requests
 colorama==0.4.6
     # via tqdm
+eel==0.14.0
+    # via auto-py-to-exe
 et-xmlfile==1.1.0
     # via openpyxl
 exceptiongroup==1.1.0
     # via trio
+future==0.18.3
+    # via eel
+gevent==22.10.2
+    # via gevent-websocket
+gevent-websocket==0.10.1
+    # via bottle-websocket
+greenlet==2.0.2
+    # via gevent
 h11==0.14.0
     # via wsproto
 idna==3.4
@@ -44,8 +66,16 @@ packaging==23.0
     # via webdriver-manager
 pandas==1.5.3
     # via -r requirements.in
+pefile==2023.2.7
+    # via pyinstaller
 pycparser==2.21
     # via cffi
+pyinstaller==5.8.0
+    # via auto-py-to-exe
+pyinstaller-hooks-contrib==2023.0
+    # via pyinstaller
+pyparsing==3.0.9
+    # via eel
 pysocks==1.7.1
     # via urllib3
 python-dateutil==2.8.2
@@ -54,6 +84,8 @@ python-dotenv==0.21.1
     # via webdriver-manager
 pytz==2022.7.1
     # via pandas
+pywin32-ctypes==0.2.0
+    # via pyinstaller
 requests==2.28.2
     # via webdriver-manager
 selenium==4.8.0
@@ -78,5 +110,14 @@ urllib3[socks]==1.26.14
     #   selenium
 webdriver-manager==3.8.5
     # via -r requirements.in
+whichcraft==0.6.1
+    # via eel
 wsproto==1.2.0
     # via trio-websocket
+zope-event==4.6
+    # via gevent
+zope-interface==5.5.2
+    # via gevent
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

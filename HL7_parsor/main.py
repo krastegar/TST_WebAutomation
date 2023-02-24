@@ -11,12 +11,14 @@ def main():
         username = 'krastegar',
         paswrd = 'Hamid&Mahasty1',
         FromDate='02/13/2023',
-        ToDate='02/22/2023',
-        LabName="Palomar Health Downtown Campus Laboratory NEW"
+        ToDate='02/24/2023',
+        LabName="LOGAN HEIGHTS FAMILY HEALTH CENTER LAB NEW"
+        # LOGAN HEIGHTS FAMILY HEALTH CENTER LAB NEW
+        # Palomar Health Downtown Campus Laboratory NEW
         )
     # setup = report.install()
     di = report.hl7_copy()
-    
+
     '''
     Some issues maybe in the future: 
     1.) if the website updates the code will break, because I am finding these elements with there ID

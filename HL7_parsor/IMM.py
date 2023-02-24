@@ -122,8 +122,8 @@ class IMM(SetUp):
             current_files = set(os.listdir(download_folder))
             if len(current_files) <= len(initial_files): 
                 try:
-                    # going to wait 4 seconds if nothing shows up 
-                    # will wait 4 more seconds
+                    # going to wait 6 seconds if nothing shows up 
+                    # will wait 6 more seconds
                     time.sleep(6)
                 except: 
                     pass 

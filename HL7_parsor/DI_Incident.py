@@ -64,29 +64,73 @@ class DI_Search(IMM, SetUp):
             # ----- Demographics tab -----------
             
             # Name fields
-        last_name = self.extract_info(driver, 'txtLastName')
-        first_name = self.extract_info(driver, 'txtFirstName')
+        last_name = self.extract_info(
+            driver = driver, 
+            element_id='txtLastName',
+            #'/html/body/form/div[2]/div/div/table/tbody/tr/td/table[2]/tbody/tr[3]/td/table/tbody/tr[2]/td[1]/table/tbody/tr[1]/td/div/div[2]/div[1]/input',
+            field_name='Last Name'
+            )
+        first_name = self.extract_info(
+            driver = driver, 
+            element_id='txtFirstName', 
+            #'/html/body/form/div[2]/div/div/table/tbody/tr/td/table[2]/tbody/tr[3]/td/table/tbody/tr[2]/td[1]/table/tbody/tr[1]/td/div/div[2]/div[2]/input',
+            field_name='First Name'
+            )
+        # print(f"FirstName  FIELD: {first_name} \n Data Type: {type(first_name)}")
+        # print(f"LastName  FIELD: {last_name} \n Data Type: {type(last_name)}")
         name = first_name + ' ' + last_name
 
+        print(f'Demographic NAME: {name}')
+
             # DOB
-        dob = self.extract_info(driver, 'txtDOB')
+        dob = self.extract_info(
+            driver=driver, 
+            element_id='txtDOB',
+            field_name='DOB'
+            )
 
             # Reported Race
-        race = self.extract_info(driver, 'txtReportedRace')
+        race = self.extract_info(
+            driver=driver, 
+            element_id='txtReportedRace',
+            field_name='Race'
+            )
 
             # Ethnicity
         ethnicity = self.dropDown_extract(driver, 'cboEthnicity')
 
             # Address
-        street = self.extract_info(driver, 'txtAddress')
-        unit = self.extract_info(driver, 'txtApartment')
-        city = self.extract_info(driver, 'txtCity')
-        state = self.extract_info(driver, 'txtState')
-        zip_code = self.extract_info(driver, 'txtZipCode' )
+        street = self.extract_info(
+            driver = driver, 
+            element_id='txtAddress',
+            field_name='Address'
+            )
+        unit = self.extract_info(
+            driver = driver, 
+            element_id='txtApartment',
+            field_name='Apartment'
+            )
+        city = self.extract_info(
+            driver=driver, 
+            element_id='txtCity',
+            field_name='City'
+            )
+        state = self.extract_info(
+            driver = driver, 
+            element_id='txtState',
+            field_name= 'State'
+            )
+        zip_code = self.extract_info(
+            driver = driver, 
+            element_id='txtZipCode',
+            field_name= 'Zip')
         demographic_address = street + unit + ', ' + city + ', ' + state + ' ' + zip_code
 
             # Phone number
-        home_phone = self.extract_info(driver, 'txtHomePhone')
+        home_phone = self.extract_info(
+            driver = driver, 
+            element_id='txtHomePhone',
+            field_name='Home Telephone')
             # cell = self.extract_info(driver, 'txtCellPhone')
 
             # Gender
@@ -100,92 +144,127 @@ class DI_Search(IMM, SetUp):
         lab_tab.click()
 
             # accession number
-        acc_num = self.extract_info(driver, 
-                                '_-11_ctl03_dgLabInfo_ctl02_txtAccNum')
-
+        acc_num = self.extract_info(
+            driver=driver, 
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtAccNum', 
+            field_name='Accession Number'
+            )
             # Specimen Collected Date
-        specimen_collect_date = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtSpecCollDate")
+        specimen_collect_date = self.extract_info(
+            driver = driver,
+            element_id="_-11_ctl03_dgLabInfo_ctl02_txtSpecCollDate",
+            field_name='Specimen Collection Date'
+            )
             # Specimen Received Date 
-        specimen_received_date = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtSpecReceDate")
-            
+        specimen_received_date = self.extract_info(
+            driver=driver,
+            element_id= "_-11_ctl03_dgLabInfo_ctl02_txtSpecReceDate",
+            field_name='Specimen Receive Date'
+            )
             # Specimen Source
-        specimen_source = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtSpecimenSourceText")
-            
+        specimen_source = self.extract_info(
+            driver = driver,
+            element_id="_-11_ctl03_dgLabInfo_ctl02_txtSpecimenSourceText",
+            field_name='Specimen Source'
+            )
             # Resulted Test
-        resulted_test = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtResultedTestL")
-            
+        resulted_test = self.extract_info(
+            driver = driver,
+            element_id="_-11_ctl03_dgLabInfo_ctl02_txtResultedTest",  # might need to change id back to put 'L' at the end
+            field_name='Resulted Test', 
+            xpath='//*[@id="_-11_ctl03_dgLabInfo_ctl02_txtResultedTestL"]'
+            )
             # result
-        result = self.extract_info(driver,
-                                "_-11_ctl03_dgLabInfo_ctl02_txtResult")
-            
+        result = self.extract_info(
+            driver = driver,
+            element_id="_-11_ctl03_dgLabInfo_ctl02_txtResult", # might need to change id back to put 'L' at the end
+            field_name='Result',
+            xpath='//*[@id="_-11_ctl03_dgLabInfo_ctl02_txtResult"]'
+            )
             # resulted organism 
         result_organism = self.extract_info(driver, 
-                                "_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganism")
-
+            element_id="_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganism",
+            field_name= 'Resulted Organism',
+            xpath= '//*[@id="_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganismL"]'
+            )
             # units
-        units = self.extract_info(driver, 
-                                '_-11_ctl03_dgLabInfo_ctl02_txtUnits')
-            
+        units = self.extract_info(
+            driver = driver, 
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtUnits',
+            field_name='Units'
+            )
             # Reference Range
-        ref_range = self.extract_info(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_txtReferencerange')
-
+        ref_range = self.extract_info(
+            driver = driver,
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtReferencerange',
+            field_name='Reference Range'
+            )
             # Result date
-        result_date = self.extract_info(driver, 
-                                '_-11_ctl03_dgLabInfo_ctl02_txtResultDate')
-            
+        result_date = self.extract_info(
+            driver = driver, 
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtResultDate',
+            field_name= 'Result Date'
+            )
             # Performing facility ID, 
-        perform_facility_id = self.extract_info(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_txtPerformingFacilityID')
-            
-
+        perform_facility_id = self.extract_info(
+            driver,
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtPerformingFacilityID',
+            field_name='Performing Facility ID'
+            )
             # Abnormal Flag
-        ab_flag = self.dropDown_extract(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_ddlAbnormalFlag')
-            
+        ab_flag = self.dropDown_extract(
+            driver=driver,
+            select_id='_-11_ctl03_dgLabInfo_ctl02_ddlAbnormalFlag',
+            menu_id='_-11_ctl03_dgLabInfo_ctl02_ddlAbnormalFlag'
+            )
             # Observation Ressults
-        ob_results = self.dropDown_extract(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_ddlObservationResultStat')
+        ob_results = self.dropDown_extract(
+            driver=driver,
+            select_id='_-11_ctl03_dgLabInfo_ctl02_ddlObservationResultStat',
+            menu_id= '/html/body/form/div[2]/div/div/table[2]/tbody/tr[5]/td/table/tbody/tr/td/div/div/table/tbody/tr/td/table/tbody/tr[1]/td/div[1]/table[2]/tbody/tr[10]/td/table/tbody/tr[4]/td[1]/div[1]/select')
 
             # Provider name
-        provider_name = self.extract_info(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_txtProviderName')
-
+        provider_name = self.extract_info(
+            driver=driver,
+            element_id= '_-11_ctl03_dgLabInfo_ctl02_txtProviderName',
+            field_name='Provider Name'
+            )
             # Order callback number
-        provider_number = self.extract_info(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_txtProviderCallBack')
-
+        provider_number = self.extract_info(
+            driver = driver,
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtProviderCallBack',
+            field_name='Provider Number'
+            )
             # Provider address 
         list_of_addressIDs = [
-                '_-11_ctl03_dgLabInfo_ctl02_txtProviderAddress',
-                '_-11_ctl03_dgLabInfo_ctl02_txtProviderCity',
-                '_-11_ctl03_dgLabInfo_ctl02_txtProviderState',
-                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip'
+                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderAddress', 'Address'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderCity', 'City'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderState','State'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip', 'Zip']
                 ]
         provider_address = self.address(driver, list_of_addressIDs)
 
             # Facility name 
-        facility_name = self.extract_info(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityName')
+        facility_name = self.extract_info(
+            driver = driver,
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtFacilityName',
+            field_name= 'FacilityName')
             
             # Facility address
         facility_address_ids = [
-                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityAddress',
-                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityCity',
-                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityState',
-                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip'
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityAddress', 'Address'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityCity', 'City'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityState', 'State'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip', 'Zip']
             ]
         facility_address = self.address(driver, facility_address_ids)
 
             # Facility phone number
-        facility_phone = self.extract_info(driver,
-                                '_-11_ctl03_dgLabInfo_ctl02_txtFacilityPhone')
-            
-
+        facility_phone = self.extract_info(
+            driver=driver,
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtFacilityPhone',
+            field_name='Facility Phone'
+            )
             # have to click cancel after I am done with getting information from both tabs
         cancel_id = 'btnCancel'
         cancel_btn = driver.find_element(By.ID, cancel_id)
@@ -263,52 +342,68 @@ class DI_Search(IMM, SetUp):
         return webCMR_values,webCMR_indicies
 
     def address(self, driver, ids : list):
-        prov_st = self.extract_info(driver,
-                                ids[0])
-        prov_city = self.extract_info(driver,
-                               ids[1])
-        prov_state = self.extract_info(driver,
-                                ids[2])
-        prov_zip = self.extract_info(driver,
-                                ids[3])
+        prov_st = self.extract_info(
+            driver= driver,
+            element_id=ids[0][0],
+            field_name=ids[0][1]
+            )
+        prov_city = self.extract_info(
+            driver=driver,
+            element_id=ids[1][0],
+            field_name=ids[1][1]
+            )
+        prov_state = self.extract_info(
+            driver=driver,
+            element_id=ids[2][0],
+            field_name=ids[2][1]
+            )
+        prov_zip = self.extract_info(
+            driver = driver,
+            element_id=ids[3][0],
+            field_name=ids[3][1]
+            )
         provider_address = prov_st + ', ' + prov_city +', ' + prov_state + ' ' + prov_zip
         return provider_address
 
-    def dropDown_extract(self, driver, menu_id):
+    def dropDown_extract(self, driver,  select_id, menu_id=None):
         '''
         Alternative method for getting info from dropdown menu
         '''
-        dropdown_element = driver.find_element(By.ID, menu_id)
-        selected_option = Select(dropdown_element).first_selected_option
+        try:
+            dropdown_element = driver.find_element(By.ID, select_id)
+            selected_option = Select(dropdown_element).first_selected_option
+        except NoSuchElementException:
+            if menu_id:
+                try:
+                    dropdown_element = driver.find_element(By.XPATH, menu_id)
+                    selected_option = Select(dropdown_element).first_selected_option
+                except NoSuchElementException:
+                    text = 'CODE ERROR....element not found but is there'
+                    return text
+            else:
+                raise NoSuchElementException(f"Menu with ID {menu_id} and Select with {select_id} not found.")
         text = selected_option.text
         return text
-
-    def extract_info(self, driver, element_id):
+    def extract_info(self, driver, element_id, xpath=None, field_name=None ):
+        
         '''
         Function is meant to extract information from text boxes, 
-        using the elements ID as a identifier. 
+        using the elements ID as a identifier. If element is not found 
+        by ID, function will attempt to find it by XPath.
         '''
-        wait = WebDriverWait(driver, 2)
-        # try-except block is meant to catch the off scenario of resulted test ID being different for 
-        # different labs 
         try: 
-            element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
-            value = element_btn.get_attribute('value')
-        except  TimeoutException: 
-            # issues with resulted test on resulted test
-            try:
-                element_id = '_-11_ctl03_dgLabInfo_ctl02_txtResultedTest'
-                element_btn = driver.find_element(By.ID, element_id)
-                value = element_btn.get_attribute('value')
-            except NoSuchElementException:
-                # issues with resulted organism 
-                try:
-                    element_id = '_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganismL'
-                    element_btn = driver.find_element(By.ID, element_id)
-                    value = element_btn.get_attribute('value')
-                except  NoSuchElementException:
-                    print(f"Cant find the element {element_id}")
-
-
-
+            element_btn = driver.find_element(By.ID, element_id)
+        except NoSuchElementException:
+            if xpath:
+                element_btn = driver.find_element(By.XPATH, xpath)
+            elif field_name: 
+                # field name is a fail-safe to find element if the id by itself is not working
+                # typing in the filed name will remind me which section to look at if it breaks
+                element_btn = driver.find_element(By.XPATH, f"//*[contains(@id, {element_id})]")
+                print(f'Except Block: {field_name}')
+            else:
+                raise NoSuchElementException(f"Element with ID {element_id} and XPath {xpath} not found.")
+        
+        value = element_btn.get_attribute('value')
+        
         return value

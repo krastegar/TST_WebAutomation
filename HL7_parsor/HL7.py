@@ -52,15 +52,7 @@ class HL7_extraction(DI_Search, IMM):
                     
                     # get webCMR values
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
-                    print(
-                        f'''
-                        printing lengths: 
-                        webCMR_values = {len(webCMR_values)}
-                        webCMR_indicies = {len(webCMR_indicies)}
-                        hl7_values = {len(hl7_values)}, 
-                        hl7_sections = {len(hl7_section_labels)}
-                        '''
-                    )
+
                     # make summary df
 
                     webCMR_hl7_df = pd.DataFrame(
