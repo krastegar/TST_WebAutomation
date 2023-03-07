@@ -89,9 +89,12 @@ def word2vec(df, column1, column2):
     
     df.drop_duplicates(['DILR_ResultedTest_x', 'DILR_ResultedTest_y'], inplace=True)
     new_matches = []
-    for (tst, prod) in zip(
+    seen_column1_values = set()
+    for i, (tst, prod) in enumerate(
+        zip(
         df[column1],
         df[column2]
+        )
     ):
         test_df = df.loc[df[column1]==tst] # filtering  based on specific test result
         max_sim = test_df.loc[test_df['cosine_sim'].idxmax()] # finding the row with maximum cosine similarity
@@ -99,20 +102,27 @@ def word2vec(df, column1, column2):
         pair_tests = df.loc[(df[column1]==tst) & (df[column2]==prod)] # filter pased on pair of test
         pair_score = pair_tests['cosine_sim'].values[0] # get the score on those pair of tests
         # print(f'Max Score: {max_sim_score}\n Pair Score: {pair_score}')
+
+        # Creating test variables
+        better_match = max_sim[column2] # now looking for best match in column two of the pair to see if 
+        prod_test_df = df.loc[df[column2]==better_match] # filtering df based on Prod test that had higher similarity score 
+        prod_max_sim = prod_test_df.loc[prod_test_df['cosine_sim'].idxmax()] # finding row in filtered data that has the highest similarity score
+        prod_test_max = prod_max_sim['cosine_sim']# finding the max sim score in second prod df that and seeing if it is larger than original pair sim score. If it is we skip and then continue. If its not we append original pair
+        # prod_test_score = None
+
         if max_sim_score == pair_score:
-            print(f"MATCH: {tst} ----- {prod}")
-            new_matches.append(df.loc[(df[column1]==tst) & 
+            # print(f"MATCH: {tst} ----- {prod}")
+            prod_col_df = df.loc[df[column2]==prod] # check to see if prod column has a better score than max for TST column
+            max_prod_col = prod_col_df.loc[prod_col_df['cosine_sim'].idxmax()] # row that contains highest sim score based on PROD column
+            prod_col_max = max_prod_col['cosine_sim']
+            if prod_col_max == max_sim_score:
+                print('something')
+                new_matches.append(df.loc[(df[column1]==tst) & 
                                        (df[column2]==prod) & 
                                        (df['cosine_sim']==pair_score)]
                             )
-        else:
-            
-            prod_test_df = df.loc[df[column2]==prod] # filtering df based on production resultedTest
-            prod_max_sim = prod_test_df.loc[prod_test_df['cosine_sim'].idxmax()] # finding row in filtered data that has the highest similarity score
-            prod_test_max = prod_max_sim['cosine_sim']# finding the max sim score in second prod df that and seeing if it is larger than original pair sim score. If it is we skip and then continue. If its not we append original pair
-            # prod_test_score = None
-
-            if prod_test_max >= pair_score:
+            else: continue
+        elif prod_test_max > pair_score:
                 print(
                     f"""
                     Checking to see which test pairs are seen in my condition
@@ -122,28 +132,27 @@ def word2vec(df, column1, column2):
                     ProdTest Check: {prod_test_max}
                     """
                 )
-                if not all(
-                    df.loc[
-                    (df[column1]==tst) & 
-                    (df[column2]==prod) & 
-                    (df['cosine_sim']==pair_score)
-                ].isin(new_matches)):
+                
+                if tst not in seen_column1_values:
+                    # append the row to the list of matches
                     new_matches.append(df.loc[(df[column1]==tst) & 
-                            (df[column2]==prod) & 
-                            (df['cosine_sim']==pair_score)])
-                else:
-                    continue
-            else: 
-                raise AssertionError(
-                    f"""
-                    There has been an issue with the following pairs of tests 
-                    in my condition of inequality of similarity scores
-                    TST: {tst}
-                    PROD: {prod}
-                    OG_Pair: {pair_score}
-                    ProdTest Check: {prod_test_max}
-                    """
-                    )
+                                       (df[column2]==prod) & 
+                                       (df['cosine_sim']==pair_score)]
+                                )
+                    # add the column1 value to the set of seen values
+                    seen_column1_values.add(tst)
+                continue           
+        else: 
+            raise AssertionError(
+                        f"""
+                        There has been an issue with the following pairs of tests 
+                        in my condition of inequality of similarity scores
+                        TST: {tst}
+                        PROD: {prod}
+                        OG_Pair: {pair_score}
+                        ProdTest Check: {prod_test_max}
+                        """
+                        )
             
     new_df = pd.concat(new_matches)
     return new_df
