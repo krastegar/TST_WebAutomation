@@ -65,97 +65,39 @@ def main():
     return 
     
 def word2vec(df, column1, column2):
-    df[column1] = df[column1].astype(str)
-    df[column2] = df[column2].astype(str)
-    # Preprocess the strings in the X and Y columns
-    df['X_processed'] = df[column1].apply(lambda x: [word.lower() for word in x.split()]) #if word.isalpha()])
-    df['y_processed'] = df[column2].apply(lambda x: [word.lower() for word in x.split()]) #if word.isalpha()])
-
-    # Concatenate the processed strings into a list of sentences
-    sentences = list(df['X_processed']) + list(df['y_processed'])
-
-    # Train a word2vec model on the sentences
-    model = gensim.models.Word2Vec(sentences, vector_size=100, window=5, min_count=5, workers=4)
-
-    # Calculating word vectors for each word in the list 
-    df['X_vector'] = df['X_processed'].apply(lambda x: np.mean([model.wv[word] for word in x if word in model.wv.key_to_index], axis=0))
-    df['Y_vector'] = df['y_processed'].apply(lambda x: np.mean([model.wv[word] for word in x if word in model.wv.key_to_index], axis=0))
-
-    # Compute the cosine similarity between the vectors for each pair of strings
-    df['cosine_sim'] = df.apply(lambda row: max(
-        cosine_similarity([row['X_vector']], [row['Y_vector']])[0][0],
-        cosine_similarity([row['Y_vector']], [row['X_vector']])[0][0]
-    ) if not np.isnan(row['X_vector']).any() and not np.isnan(row['Y_vector']).any() else np.nan, axis=1)
+    counts = {}
+    # creating count table of unique Prodtest and TSTtest that are seen together
+    # And I am going to use these counts to find matches of test names 
+    for i, row in df.iterrows():
+        col1_val = row[column1]
+        col2_val = row[column2]
+        
+        if col1_val not in counts:
+            counts[col1_val] = {}
+        
+        if col2_val in counts[col1_val]:
+            counts[col1_val][col2_val] += 1
+        else:
+            counts[col1_val][col2_val] = 1
+    # Now going to look at the the dictionary values and look inside the nested dictionary 
+    # for counts and which ever counts is the most for that value pair I will use that as a match
+    new_df = pd.DataFrame(counts)
+    matched_array = []
+    for index, row in new_df.iterrows():
+        max_val = row.max()
+        col_names = row[row == max_val].index.tolist()
+        if len(col_names) > 1: 
+            row_names = index
+            for col in col_names: 
+                tie_break_score = new_df[col].max()
+                if tie_break_score > max_val: 
+                    col_names.remove(new_df[col].name)
+        matched_array.append((index, col_names[0], max_val))
     
-    df.drop_duplicates(['DILR_ResultedTest_x', 'DILR_ResultedTest_y'], inplace=True)
-    new_matches = []
-    seen_column1_values = set()
-    for i, (tst, prod) in enumerate(
-        zip(
-        df[column1],
-        df[column2]
-        )
-    ):
-        test_df = df.loc[df[column1]==tst] # filtering  based on specific test result
-        max_sim = test_df.loc[test_df['cosine_sim'].idxmax()] # finding the row with maximum cosine similarity
-        max_sim_score = max_sim['cosine_sim'] # max sim score for specific tst test
-        pair_tests = df.loc[(df[column1]==tst) & (df[column2]==prod)] # filter pased on pair of test
-        pair_score = pair_tests['cosine_sim'].values[0] # get the score on those pair of tests
-        # print(f'Max Score: {max_sim_score}\n Pair Score: {pair_score}')
-
-        # Creating test variables
-        better_match = max_sim[column2] # now looking for best match in column two of the pair to see if 
-        prod_test_df = df.loc[df[column2]==better_match] # filtering df based on Prod test that had higher similarity score 
-        prod_max_sim = prod_test_df.loc[prod_test_df['cosine_sim'].idxmax()] # finding row in filtered data that has the highest similarity score
-        prod_test_max = prod_max_sim['cosine_sim']# finding the max sim score in second prod df that and seeing if it is larger than original pair sim score. If it is we skip and then continue. If its not we append original pair
-        # prod_test_score = None
-
-        if max_sim_score == pair_score:
-            # print(f"MATCH: {tst} ----- {prod}")
-            prod_col_df = df.loc[df[column2]==prod] # check to see if prod column has a better score than max for TST column
-            max_prod_col = prod_col_df.loc[prod_col_df['cosine_sim'].idxmax()] # row that contains highest sim score based on PROD column
-            prod_col_max = max_prod_col['cosine_sim']
-            if prod_col_max == max_sim_score:
-                print('something')
-                new_matches.append(df.loc[(df[column1]==tst) & 
-                                       (df[column2]==prod) & 
-                                       (df['cosine_sim']==pair_score)]
-                            )
-            else: continue
-        elif prod_test_max > pair_score:
-                print(
-                    f"""
-                    Checking to see which test pairs are seen in my condition
-                    TST: {tst}
-                    PROD: {prod}
-                    OG_Pair: {pair_score}
-                    ProdTest Check: {prod_test_max}
-                    """
-                )
-                
-                if tst not in seen_column1_values:
-                    # append the row to the list of matches
-                    new_matches.append(df.loc[(df[column1]==tst) & 
-                                       (df[column2]==prod) & 
-                                       (df['cosine_sim']==pair_score)]
-                                )
-                    # add the column1 value to the set of seen values
-                    seen_column1_values.add(tst)
-                continue           
-        else: 
-            raise AssertionError(
-                        f"""
-                        There has been an issue with the following pairs of tests 
-                        in my condition of inequality of similarity scores
-                        TST: {tst}
-                        PROD: {prod}
-                        OG_Pair: {pair_score}
-                        ProdTest Check: {prod_test_max}
-                        """
-                        )
-            
-    new_df = pd.concat(new_matches)
-    return new_df
+    matched_df = pd.DataFrame(matched_array, columns=['PRODTest', 'TSTTest', 'Frequency of Match'])
+        
+    #print(counts)
+    return matched_df
 
 if __name__=="__main__":
     sys.exit(main())
