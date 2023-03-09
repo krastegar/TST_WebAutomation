@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
+from selenium.common.exceptions import NoSuchElementException
 
 
 class IMM(SetUp): 
@@ -30,15 +31,29 @@ class IMM(SetUp):
         This method is used for logging into TSTWebCMR and going to 
         Incoming Message Monitor page 
         '''
+        # login and go to home page
         driver = self.login()
         # Navigating the dropdown menu to go into IMM
         self.nav2IMM(driver)
         return driver 
-
+    
+    def go_home(self, driver):
+        '''
+        Method is meant to navigate back home, using home icon button
+        to get there
+        '''
+        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
+        home_btn.click()
+        return
+    
     def nav2IMM(self, driver):
         '''
         Only works if you are at the home page and want to navigate to IMM menu
         '''
+        # Navigating back to home page
+        self.go_home(driver)
+
+        # Looking at Administrator dropdown menu
         wait = WebDriverWait(driver, 8)
         dropdown_menu = wait.until(EC.presence_of_element_located((By.ID, "FragTop1_mnuMain-menuItem017")))
         dropdown_menu.click()
@@ -211,3 +226,24 @@ class IMM(SetUp):
                 else:
                     # Return 'Categorical' for other cases
                     return 'Categorical'
+    def multiFind(self, driver, element_id, xpath=None, field_name=None ):
+        
+        '''
+        Function is meant to locate regions on html web page, 
+        using the elements ID as a identifier. If element is not found 
+        by ID, function will attempt to find it by XPath.
+        '''
+        try: 
+            element_btn = driver.find_element(By.ID, element_id)
+        except NoSuchElementException:
+            if xpath:
+                # this is the full or relative xpath 
+                element_btn = driver.find_element(By.XPATH, xpath)
+            elif field_name: 
+                # field name is a fail-safe to find element if the id by itself is not working
+                # typing in the filed name will remind me which section to look at if it breaks
+                element_btn = driver.find_element(By.XPATH, f"//*[contains(@id, {element_id})]")
+            else:
+                raise NoSuchElementException(f"Element with ID {element_id} and XPath {xpath} not found.")
+        
+        return element_btn

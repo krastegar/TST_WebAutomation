@@ -52,6 +52,13 @@ class HL7_extraction(DI_Search, IMM):
                     
                     # get webCMR values
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
+                    '''
+                    web_values = self.webTST_scrape(driver, di_num_list, i)
+                    if web_values == 'skip':
+                        continue
+                    else: 
+                        webCMR_values, webCMR_indicies = web_values
+                    '''
 
                     # make summary df
 
@@ -75,8 +82,19 @@ class HL7_extraction(DI_Search, IMM):
                     # Copy and filter hl7 results
                     hl7_values, hl7_section_labels = self.data_wrangling(driver, resultTest, acc_num)
 
+                    # getting web data
+                    # get webCMR values
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
-                    
+                    '''
+                    Note:
+                    This is a skip function (will add if they feel like it is appropriate)
+
+                    web_values = self.webTST_scrape(driver, di_num_list, i)
+                    if web_values == 'skip':
+                        continue
+                    else: 
+                        webCMR_values, webCMR_indicies = web_values
+                    '''
                     # make summary df
 
                     webCMR_hl7_df = pd.DataFrame(

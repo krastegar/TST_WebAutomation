@@ -142,7 +142,19 @@ class DI_Search(IMM, SetUp):
         lab_tab_id = 'ctl37_btnSupplementalTabSYS'
         lab_tab = driver.find_element(By.ID, lab_tab_id)
         lab_tab.click()
-
+        #time.sleep(5)
+        '''
+        # skip if there is not any info on lab tab
+        x = input('Is there info on lab tab (y/n)?...')
+        if x in ('y', 'yes', 'Y', 'Yes'): 
+            x = None
+        elif x in ('n', 'No', 'no', 'N'): 
+            x = None
+            self.nav2IMM(driver)
+            return 'skip'
+        else: pass
+        # end 
+         '''
             # accession number
         acc_num = self.extract_info(
             driver=driver, 
@@ -339,7 +351,7 @@ class DI_Search(IMM, SetUp):
 
             # navigating to IMM menu after DI searches
         _ = self.nav2IMM(driver)
-        return webCMR_values,webCMR_indicies
+        return (webCMR_values,webCMR_indicies)
 
     def address(self, driver, ids : list):
         prov_st = self.extract_info(
