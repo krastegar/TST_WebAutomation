@@ -27,8 +27,7 @@ class DI_Search(IMM, SetUp):
         di_num_list = list(df['DILR_IncidentID'])
 
         # click home button 
-        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
-        home_btn.click()
+        self.go_home(driver)
         webCMR_values, webCMR_indicies = None, None # bounding these variables
         
         # Scraping values from Demographic and Lab tabs off of TST website

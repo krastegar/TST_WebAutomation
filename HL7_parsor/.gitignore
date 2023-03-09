@@ -1,0 +1,5 @@
+# Ignoring output folder
+output/
+
+# ignoring log files
+*.log

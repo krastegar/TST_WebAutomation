@@ -147,8 +147,7 @@ class IMM(SetUp):
             else: 
                 break 
         # driver.quit()
-        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
-        home_btn.click()
+        self.go_home(driver)
         return driver
 
     def download_folder(self):

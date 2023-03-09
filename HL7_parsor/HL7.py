@@ -2,6 +2,7 @@ import os
 import pandas as pd 
 import re
 import numpy as np
+import logging
 
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
@@ -61,7 +62,6 @@ class HL7_extraction(DI_Search, IMM):
                     '''
 
                     # make summary df
-
                     webCMR_hl7_df = pd.DataFrame(
                         data=np.array([webCMR_values,hl7_values, hl7_section_labels]).T, 
                         columns=['TSTWebCMR Data', 'HL7 Data', 'HL7 Section'], 
@@ -72,7 +72,6 @@ class HL7_extraction(DI_Search, IMM):
                     report = self.hl7_report(resultTest, acc_num, di_num,webCMR_hl7_df)
                     
                 except StaleElementReferenceException as e:
-
                     # seaching accession and resulted test again 
                     acc_num = int(acc_num_list[i])
                     resultTest = str(test_list[i])
@@ -267,8 +266,7 @@ class HL7_extraction(DI_Search, IMM):
             facility_phone
         ]
         # Need to return home so that we can go to disease tab next 
-        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
-        home_btn.click()
+        self.go_home(driver)
 
         return hl7_values, hl7_section_label
     
