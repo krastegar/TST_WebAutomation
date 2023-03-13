@@ -42,7 +42,12 @@ class IMM(SetUp):
         Method is meant to navigate back home, using home icon button
         to get there
         '''
-        home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
+        # home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
+        home_btn = self.multiFind(
+            driver = driver, 
+            element_id='FragTop1_lbtnHome',
+            xpath= '/html/body/form/table[2]/tbody/tr/td[1]/div/a'
+            )
         home_btn.click()
         return
     
@@ -55,18 +60,31 @@ class IMM(SetUp):
 
         # Looking at Administrator dropdown menu
         wait = WebDriverWait(driver, 8)
-        dropdown_menu = wait.until(EC.presence_of_element_located((By.ID, "FragTop1_mnuMain-menuItem017")))
+        #dropdown_menu = wait.until(EC.presence_of_element_located((By.ID, "FragTop1_mnuMain-menuItem017")))
+        dropdown_menu = self.multiFind(
+            driver=driver,
+            element_id= "FragTop1_mnuMain-menuItem017",
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[36]/tbody/tr/td[6]'
+        )
         dropdown_menu.click()
 
         # Hopefully clicking on incoming message monitor options
         # Wait for the second level dropdown to be present and then click on it
-        second_menu = "FragTop1_mnuMain-menuItem017-subMenu-menuItem009"
-        second_level_dropdown = wait.until(EC.presence_of_element_located((By.ID, second_menu)))
+        #second_menu = "FragTop1_mnuMain-menuItem017-subMenu-menuItem009"
+        second_level_dropdown = self.multiFind(
+            driver, 
+            element_id= "FragTop1_mnuMain-menuItem017-subMenu-menuItem009",
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[16]/tbody/tr[9]/td'
+        )
         second_level_dropdown.click()
 
         # Wait for the desired option to be present and then click on it
         imm = 'FragTop1_mnuMain-menuItem017-subMenu-menuItem009-subMenu-menuItem003'
-        desired_option = wait.until(EC.presence_of_element_located((By.ID, imm)))
+        desired_option = self.multiFind(
+            driver=driver,
+            element_id=imm,
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[5]/tbody/tr[3]/td'
+        )
         desired_option.click()
     
     def imm_search(self): 
@@ -82,8 +100,11 @@ class IMM(SetUp):
         
         # Choosing lab of interest
         imm_lab_menu = 'ddlLaboratory'
-        wait = WebDriverWait(driver, 8)
-        lab_dropdown = wait.until(EC.presence_of_element_located((By.ID, imm_lab_menu)))
+        lab_dropdown = self.multiFind(
+            driver=driver,
+            element_id=imm_lab_menu,
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[2]/td[2]/div[1]/select'
+        )
         lab_dropdown.click()
         
         # Create a Select object and select Lab of Interest 
@@ -92,7 +113,11 @@ class IMM(SetUp):
         
         # Find search button and click 
         search_id = 'ibtnSearch'
-        search =  driver.find_element(By.ID, search_id )
+        search =  self.multiFind(
+            driver=driver,
+            element_id=search_id,
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[4]/td/div/input[1]'
+        )
         search.click()
 
         return driver
@@ -127,6 +152,9 @@ class IMM(SetUp):
         export_id = 'btnExport'
         export_btn = wait.until(EC.presence_of_element_located((By.ID, export_id)))
         export_btn.click()
+
+        # switching back to parent frame / default content: 
+        driver.switch_to.default_content()
 
         # Making relative path to Downloads folder
         download_folder = self.download_folder()
@@ -232,16 +260,18 @@ class IMM(SetUp):
         using the elements ID as a identifier. If element is not found 
         by ID, function will attempt to find it by XPath.
         '''
+        wait = WebDriverWait(driver, 2)
         try: 
-            element_btn = driver.find_element(By.ID, element_id)
+            element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
         except NoSuchElementException:
             if xpath:
                 # this is the full or relative xpath 
-                element_btn = driver.find_element(By.XPATH, xpath)
+                element_btn = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             elif field_name: 
                 # field name is a fail-safe to find element if the id by itself is not working
                 # typing in the filed name will remind me which section to look at if it breaks
-                element_btn = driver.find_element(By.XPATH, f"//*[contains(@id, {element_id})]")
+                # this is using a partial xpath to find element
+                element_btn = wait.until(EC.presence_of_element_located((By.XPATH, f"//*[contains(@id, {element_id})]")))
             else:
                 raise NoSuchElementException(f"Element with ID {element_id} and XPath {xpath} not found.")
         

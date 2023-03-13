@@ -22,23 +22,26 @@ class HL7_extraction(DI_Search, IMM):
         '''
         In the final version I wll have disease_search in this method 
         '''
-        
+        logging.info('Exporting DataFrame')
         # Going into IMM Menu and Downloading excel sheet 
         driver = self.imm_export()
 
+        logging.info("Random Sampling from Export....grabing unique test com")
         # Getting Disease Queries and Hl7 accession # from excel sheet
         df = self.export_df()
         
         # Navigate to IMM menu after export
-        _ = self.nav2IMM(driver)
-
+        _ = self.nav2IMM(driver) 
+        
+        logging.info("Doing Searches for HL7 and Disease Incident")
         acc_num_list = list(df['DILR_AccessionNumber'])
         di_num_list = list(df['DILR_IncidentID'])
         # Resulted test list for searches 
         test_list = list(df['DILR_ResultedTest'])
-        wait = WebDriverWait(driver, 10)
+
         for i in range(len(acc_num_list)):
             print(f'\nITERATION #: {i}')
+            logging.info(f'\nITERATION #: {i}')
             try: 
                 try: 
                     # Searching IMM for specific accession numbers 
@@ -46,12 +49,15 @@ class HL7_extraction(DI_Search, IMM):
                     acc_num = int(acc_num_list[i])
                     resultTest = str(test_list[i])
                     di_num = int(di_num_list[i])
-                    acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
+
+                    logging.info("Inputting ResultedTest and Accession numbers in IMM search boxes")
+                    acc_box, test_search = self.acc_test_search(driver, acc_num, resultTest)
 
                     # Copy and filter hl7 results
                     hl7_values, hl7_section_labels = self.data_wrangling(driver, resultTest, acc_num)
                     
                     # get webCMR values
+                    logging.info("Performing Webscraping")
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
                     '''
                     web_values = self.webTST_scrape(driver, di_num_list, i)
@@ -69,40 +75,43 @@ class HL7_extraction(DI_Search, IMM):
                         )
 
                     # make summarry report 
+                    logging.info('Making summary Report folders')
                     report = self.hl7_report(resultTest, acc_num, di_num,webCMR_hl7_df)
                     
                 except StaleElementReferenceException as e:
-                    # seaching accession and resulted test again 
+                    # Searching IMM for specific accession numbers 
+                    # Going to have to put this in a for loop 
                     acc_num = int(acc_num_list[i])
                     resultTest = str(test_list[i])
                     di_num = int(di_num_list[i])
-                    acc_box, test_search = self.acc_test_search(wait, acc_num, resultTest)
-                    
+
+                    logging.info("Inputting ResultedTest and Accession numbers in IMM search boxes")
+                    acc_box, test_search = self.acc_test_search(driver, acc_num, resultTest)
+
                     # Copy and filter hl7 results
                     hl7_values, hl7_section_labels = self.data_wrangling(driver, resultTest, acc_num)
-
-                    # getting web data
+                    
                     # get webCMR values
+                    logging.info("Performing Webscraping")
                     webCMR_values, webCMR_indicies = self.webTST_scrape(driver, di_num_list, i)
                     '''
-                    Note:
-                    This is a skip function (will add if they feel like it is appropriate)
-
                     web_values = self.webTST_scrape(driver, di_num_list, i)
                     if web_values == 'skip':
                         continue
                     else: 
                         webCMR_values, webCMR_indicies = web_values
                     '''
-                    # make summary df
 
+                    # make summary df
                     webCMR_hl7_df = pd.DataFrame(
                         data=np.array([webCMR_values,hl7_values, hl7_section_labels]).T, 
                         columns=['TSTWebCMR Data', 'HL7 Data', 'HL7 Section'], 
                         index=webCMR_indicies
                         )
-                    # produce report 
-                    report = self.hl7_report(resultTest, acc_num, webCMR_hl7_df)
+
+                    # make summarry report 
+                    logging.info('Making summary Report folders')
+                    report = self.hl7_report(resultTest, acc_num, di_num,webCMR_hl7_df)
             except StaleElementReferenceException as e:
                 continue
         home_directory = os.path.expanduser( '~' )
@@ -111,15 +120,30 @@ class HL7_extraction(DI_Search, IMM):
         query_df = df.to_excel(f'{new_dir}/query_summary.xlsx')
     
 
-    def acc_test_search(self, wait, acc_num, resultTest):
-        acc_box = wait.until(EC.presence_of_element_located((By.ID, 'txtAccession')))
+    def acc_test_search(self, driver, acc_num, resultTest):
+        #acc_box = wait.until(EC.presence_of_element_located((By.ID, 'txtAccession')))
+        acc_box = self.multiFind(
+            driver=driver,
+            element_id= 'txtAccession',
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[1]/td[8]/input'
+        )
         acc_box.clear()
         acc_box.send_keys(str(acc_num))
-        test_search = wait.until(EC.presence_of_element_located((By.ID, 'txtResultedTest')))
+        #test_search = wait.until(EC.presence_of_element_located((By.ID, 'txtResultedTest')))
+        test_search = self.multiFind(
+            driver=driver,
+            element_id= 'txtResultedTest',
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[3]/td[2]/input'
+        )
         test_search.clear()
         test_search.send_keys(resultTest)
         search_id = 'ibtnSearch'
-        search_btn = wait.until(EC.presence_of_element_located((By.ID, search_id)))
+        #search_btn = wait.until(EC.presence_of_element_located((By.ID, search_id)))
+        search_btn = self.multiFind(
+            driver=driver,
+            element_id= search_id,
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[4]/td/div/input[1]'
+        )
         search_btn.click()
         return acc_box,test_search
 

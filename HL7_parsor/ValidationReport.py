@@ -1,11 +1,13 @@
 import sys
-import os
+
 import logging
 from HL7 import HL7_extraction
 from selenium.common.exceptions import (
     NoSuchElementException, 
-    StaleElementReferenceException
+    StaleElementReferenceException,
+    TimeoutException
     )
+from IMM import IMM
 
 
 def main(): 
@@ -13,21 +15,21 @@ def main():
     # log_path = os.path.expanduser('~') + '/Desktop'
     
     # initializing logging file 
-    logging.basicConfig(filename='Debug_ERROR.log', level=logging.DEBUG, format='%(asctime)s:%(levelname)s:%(message)s')
-    
+    logging.basicConfig(filename='Log_Info.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+
     # asking for input to start code
     username = str(input("Please enter your TST username: "))
     password = str(input("Please enter your password: "))
     FromDate = str(input("Please enter starting date of TST export: "))
     EndDate = str(input("Please enter end date of TST export: "))
     LabName = str(input('Please enter the lab name that you want to validate: '))
+
     try:
         # process start 
         logging.info('Starting the process....')
     
-
         # logging function call
-        logging.debug('Running HL7_Extraction method hl7_copy')
+        
         report = HL7_extraction(
             username = username, #'krastegar',
             paswrd = password, #'Hamid&Mahasty1',
@@ -41,12 +43,16 @@ def main():
         di = report.hl7_copy()
         break_pt = None
     except NoSuchElementException as ne:
-        logging.error('An error occurred: %s', str(ne), exc_info=True)
-        input("Copy Error Report and then press Enter")
-    
+        # Log the error traceback
+        logging.exception("An error occurred, check Log_info.log: %s", ne)
+        input('Press enter to continue.....')
     except StaleElementReferenceException as se:
-        logging.error('An error occurred: %s', str(se), exc_info=True)
-        input("Copy Error Report and then press Enter")
+        logging.exception("An error occurred, check Log_info.log: %s", se)
+        input('Press enter to continue.....')
+
+    except TimeoutException as te:
+        logging.exception("An error occurred, check Log_info.log: %s", te)
+        input('Press enter to continue.....')
     
     logging.info('Process Complete...')
     '''

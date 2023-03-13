@@ -2,6 +2,7 @@ import time
 import os
 import pandas as pd
 import re
+import logging
 
 from IMM import IMM
 from SetUp import SetUp
@@ -40,10 +41,12 @@ class DI_Search(IMM, SetUp):
         di_num = int(di_num_list[i])
             
         # navigating to disease incidents tab
+        logging.info('Clicking Disease Incident tab')
         DI_tab = driver.find_element(By.ID, 'ibtnTabDisInc')
         DI_tab.click()
             
         # Searching for specific disease incident 
+        logging.info("Inputting DiseaseIncidentID and clicking on Results ")
         di_search_box = 'txtFindDisInc'
         DI_search = driver.find_element(By.ID, di_search_box)
         DI_search.send_keys(str(di_num))
@@ -61,7 +64,7 @@ class DI_Search(IMM, SetUp):
             # grabbing information from boxes of interest 
             
             # ----- Demographics tab -----------
-            
+            logging.info("Extracting Data from Demographic Tab")
             # Name fields
         last_name = self.extract_info(
             driver = driver, 
@@ -79,7 +82,7 @@ class DI_Search(IMM, SetUp):
         # print(f"LastName  FIELD: {last_name} \n Data Type: {type(last_name)}")
         name = first_name + ' ' + last_name
 
-        print(f'Demographic NAME: {name}')
+        #print(f'Demographic NAME: {name}')
 
             # DOB
         dob = self.extract_info(
@@ -138,6 +141,7 @@ class DI_Search(IMM, SetUp):
 
             # -------- Lab tab ------------------
             # Navigate to lab tab 
+        logging.info('Switching to Lab Tab')
         lab_tab_id = 'ctl37_btnSupplementalTabSYS'
         lab_tab = driver.find_element(By.ID, lab_tab_id)
         lab_tab.click()
@@ -154,6 +158,7 @@ class DI_Search(IMM, SetUp):
         else: pass
         # end 
          '''
+        logging.info('Grabbing information from Lab Tab')
             # accession number
         acc_num = self.extract_info(
             driver=driver, 
@@ -277,6 +282,7 @@ class DI_Search(IMM, SetUp):
             field_name='Facility Phone'
             )
             # have to click cancel after I am done with getting information from both tabs
+        logging.info('Finished grabbing information from WebCMR website')
         cancel_id = 'btnCancel'
         cancel_btn = driver.find_element(By.ID, cancel_id)
         cancel_btn.click()            
