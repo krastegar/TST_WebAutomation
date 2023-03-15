@@ -42,13 +42,21 @@ class IMM(SetUp):
         Method is meant to navigate back home, using home icon button
         to get there
         '''
-        # home_btn = driver.find_element(By.ID, 'FragTop1_lbtnHome')
+        # Clicking home button 
         home_btn = self.multiFind(
             driver = driver, 
             element_id='FragTop1_lbtnHome',
             xpath= '/html/body/form/table[2]/tbody/tr/td[1]/div/a'
             )
         home_btn.click()
+
+        # Clicking Search button (this is the investigators equivalent of my home button)
+        investigators_search = self.multiFind(
+            driver=driver,
+            element_id='FragTop1_mnuMain-menuItem002',
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[36]/tbody/tr/td[1]'
+        )
+        investigators_search.click()
         return
     
     def nav2IMM(self, driver):
