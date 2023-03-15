@@ -12,6 +12,8 @@ import pandas as pd
 import numpy as np
 import pyodbc
 import os
+import rapidfuzz
+from rapidfuzz import fuzz
 
 def tstRangeQuery_lab(test_center_1, test_center_2 = None):
     '''
@@ -85,7 +87,6 @@ def completeness_report(query, conn):
     a dataframe that summarize the results of the bulk exports 
     '''
     df = pd.read_sql_query(query, conn)
-
     # df.to_excel(r'C:\Users\krastega\Desktop\MicrosoftAccessDB\DI.xlsx')
     
     # Getting counts of Null and not Null values
@@ -98,8 +99,13 @@ def completeness_report(query, conn):
     percent_complete = (difCounts/total_num)*100
 
     # Lab df done 
-    lab_df = pd.DataFrame(percent_complete, index=null_counts.index, columns=['Percent Complete'])
-    lab_df = lab_df['Percent Complete'].map('{:,.1f}'.format)
+    lab_df = pd.DataFrame(
+        {
+        'Fields of Interest': list(df.columns),
+        'Percent Complete' : percent_complete
+        }
+    )
+    lab_df['Percent Complete'] = lab_df['Percent Complete'].map('{:,.1f}'.format)
 
     return lab_df
 
@@ -134,3 +140,74 @@ def combined_MM(folder_path, startswith):
     
     combined_df = pd.concat(prod_db_array)
     return combined_df
+
+def test_match(df, column1, column2):
+    '''
+    A function that loops through a Merged dataframe. This merged dataframe is merged on the 
+    accession number column, which results in having two ResultedTest columns. The function loops 
+    through these columns and sees how frequently each column pairs are seen next to each other
+    i.e)
+        ProdTest            TSTTest
+    SARSCov2            SARS Coronavirus+Like SARS
+    SARSCov2            Influenza Virus A 
+    ...                 ...
+    
+    It takes the most frequently seen unique pairs and makes a dictionary that will be used as
+    a key to filter out tests that do not match 
+    '''
+    
+    counts = {}
+    # creating count table of unique Prodtest and TSTtest that are seen together
+    # And I am going to use these counts to find matches of test names 
+    for _, row in df.iterrows():
+        col1_val = row[column1]
+        col2_val = row[column2]
+        
+        if col1_val not in counts:
+            counts[col1_val] = {}
+        
+        if col2_val in counts[col1_val]:
+            counts[col1_val][col2_val] += 1
+        else:
+            counts[col1_val][col2_val] = 1
+    # Now going to look at the the dictionary values and look inside the nested dictionary 
+    # for counts and which ever counts is the most for that value pair I will use that as a match
+    new_df = pd.DataFrame(counts)
+    '''
+    new_df structure:
+
+                                                SarsCov2        HepC SurfAnti A
+    SarsCoronaVirusLike::PROBE:ANT                  15               0
+
+    HepatitusC Surface Antingen::MOLC:ANTH          0                42
+
+    Code below is looping through each row and finding the column with the highest counts, if there
+    are 2 columns that have the same amount of counts it looks at both columns to see if there are 
+    any other rows within that column that have higher counts. If there are then it removes the column
+    name from the list of tie breaker columns 
+    '''
+    new_df.to_excel('Intermediate_match.xlsx')
+    matched_pairs = {}
+    match_array = []
+    for index, row in new_df.iterrows():
+        max_val = row.max()
+        col_names = row[row == max_val].index.tolist()
+        if len(col_names) > 1: 
+            for col in col_names: 
+                tie_break_score = new_df[col].max()
+                if tie_break_score > max_val: 
+                    col_names.remove(new_df[col].name)
+        matched_pairs[col_names[0]] = index
+        match_array.append((index, col_names[0]))
+    match_df = pd.DataFrame(match_array, columns=['ProdTest', 'TSTTest'])
+    
+    # Calculating string similarity score using fuzzywuzzy and 
+    # this will later be used to filter out duplicate matches
+    match_df['Ratio_score'] = match_df.apply(
+        lambda x: fuzz.token_ratio(x['ProdTest'], x['TSTTest']), 
+        axis=1
+        )
+    match_df.to_excel('match.xlsx')
+
+    return matched_pairs
+

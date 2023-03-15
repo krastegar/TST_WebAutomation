@@ -11,15 +11,14 @@
 import os
 import sys 
 import pandas as pd
-import numpy as np
-import gensim
 from sklearn.metrics.pairwise import cosine_similarity
 from util import (
     tstRangeQuery_demographic,
     tstRangeQuery_lab, 
     completeness_report, 
     database_connection,
-    combined_MM
+    combined_MM,
+    test_match
 )
 def main():
     # connecting python to microsoft access file
@@ -28,16 +27,25 @@ def main():
     
     # only need 1 connection for TST .accdb file 
     conn, cursor = database_connection(folder_path=folder_path,
-                                       file_name='TST_DIE_02132023_02212023_exp022323')
+                                       file_name='TST_DIE_02132023_03072023_exp022323')
+
+    # Going to make one excel sheet with completeness reports from both demographic 
+    # and lab information
+    writer = pd.ExcelWriter('completeness_reports.xlsx', engine='xlsxwriter')
 
     # looking at Disease Incidents table specifically and reading it into a dataframe
     # Also making completeness report for Disease Incident Export table 
     query = tstRangeQuery_demographic(test_center_1='Palomar', test_center_2='Pomerado')
     df_demo = completeness_report(query=query, conn=conn)
-
+    df_demo.to_excel(writer, sheet_name='Sheet1', startcol=0, index=False)
+    
     # Looking at Laborartory Systems table and making completeness report
     query = tstRangeQuery_lab(test_center_1='Palomar', test_center_2='Pomerado')
     df_lab = completeness_report(query=query, conn=conn)
+    df_lab.to_excel(writer, sheet_name='Sheet1', startcol = len(df_demo.columns)+1, index=False)
+
+    # close writer object
+    writer.close()
 
     # take incoming message monitors and produce a list of entries 
     # that were found in Production and not in TST
@@ -49,55 +57,39 @@ def main():
     # I want to match on these columns(prod_df[['DILR_ResultTest', 'DILR Accession']])
     # need to mess with TST env accession numbers to get rid of leading 0000
 
-    # inner join on Accession number to get matching from both datasets 
+    # right join on Accession number to get matching from both datasets 
     merged_df = pd.merge(
-         pd.DataFrame(tst_df[['DILR_AccessionNumber', 'DILR_ResultedTest']]), 
-         pd.DataFrame(prod_df[['DILR_AccessionNumber', 'DILR_ResultedTest']]), 
+         pd.DataFrame(tst_df[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
+         pd.DataFrame(prod_df[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
          on=['DILR_AccessionNumber'], 
-         how='inner'
+         how='right'
          )
-    similarity_df = word2vec(
+    similarity_key = test_match(
          merged_df, 
-         'DILR_ResultedTest_x', 
-         'DILR_ResultedTest_y'
+         'DILR_ResultTest_x', 
+         'DILR_ResultTest_y'
          )
-    similarity_df.to_excel('matchv1.xlsx')
+
+    # transform matched resulted tests to their production names and 
+    # do a 'true match' on Accession Number and ResultedTest
+    # Using similarity_key dictionary to map ResultedTest 
+    tst_df['DILR_ResultTest'].replace(similarity_key, inplace=True)
+    tst_df.to_excel('TransformedTST.xlsx')
+
+    # performing match on accession number and ResultedTest
+    new_findings = pd.merge(
+        tst_df, 
+        prod_df, 
+        on= ['DILR_AccessionNumber', 'DILR_ResultTest'],
+        how='right')
+    new_findings.to_excel('MERGER.xlsx')
+
+    # filtering production data frame based off of matched findings
+    filtered_df = prod_df[~prod_df.isin(new_findings[['DILR_AccessionNumber', 'DILR_ResultTest']])]
+    filtered_df.to_excel('Final.xlsx')
+
     return 
     
-def word2vec(df, column1, column2):
-    counts = {}
-    # creating count table of unique Prodtest and TSTtest that are seen together
-    # And I am going to use these counts to find matches of test names 
-    for i, row in df.iterrows():
-        col1_val = row[column1]
-        col2_val = row[column2]
-        
-        if col1_val not in counts:
-            counts[col1_val] = {}
-        
-        if col2_val in counts[col1_val]:
-            counts[col1_val][col2_val] += 1
-        else:
-            counts[col1_val][col2_val] = 1
-    # Now going to look at the the dictionary values and look inside the nested dictionary 
-    # for counts and which ever counts is the most for that value pair I will use that as a match
-    new_df = pd.DataFrame(counts)
-    matched_array = []
-    for index, row in new_df.iterrows():
-        max_val = row.max()
-        col_names = row[row == max_val].index.tolist()
-        if len(col_names) > 1: 
-            row_names = index
-            for col in col_names: 
-                tie_break_score = new_df[col].max()
-                if tie_break_score > max_val: 
-                    col_names.remove(new_df[col].name)
-        matched_array.append((index, col_names[0], max_val))
-    
-    matched_df = pd.DataFrame(matched_array, columns=['PRODTest', 'TSTTest', 'Frequency of Match'])
-        
-    #print(counts)
-    return matched_df
 
 if __name__=="__main__":
     sys.exit(main())
