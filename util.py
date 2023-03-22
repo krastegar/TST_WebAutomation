@@ -12,8 +12,8 @@ import pandas as pd
 import numpy as np
 import pyodbc
 import os
-import rapidfuzz
-from rapidfuzz import fuzz
+import re
+import numpy as np 
 
 def tstRangeQuery_lab(test_center_1, test_center_2 = None):
     '''
@@ -131,7 +131,7 @@ def combined_MM(folder_path, startswith):
     # getting list of files for either TST or Prod IMM exports
     prod_file_list = [os.path.join(folder_path, file) for file in os.listdir(folder_path)
                       if os.path.basename(file).startswith(startswith) and os.path.basename(file).endswith('.xlsx')]
-    
+    [print(file) for file in prod_file_list]
     # combining all of the excel files into 1 df
     prod_db_array = []
     for file in prod_file_list: 
@@ -142,6 +142,83 @@ def combined_MM(folder_path, startswith):
     return combined_df
 
 def test_match(df, column1, column2):
+    new_df = frequency_table(df, column1, column2)
+    '''
+    new_df structure:
+
+                                                SarsCov2        HepC SurfAnti A
+    SarsCoronaVirusLike::PROBE:ANT                  15               0
+
+    HepatitusC Surface Antingen::MOLC:ANTH          0                42
+
+    Code below is looping through each row and finding the column with the highest counts, if there
+    are 2 columns that have the same amount of counts it looks at both columns to see if there are 
+    any other rows within that column that have higher counts. If there are then it removes the column
+    name from the list of tie breaker columns 
+    '''
+    # new_df.to_excel('Intermediate_match.xlsx') --- gives count table 
+    matched_pairs = {}
+    match_array = []
+    for index, row in new_df.iterrows():
+        max_val = row.max()
+        col_names = row[row == max_val].index.tolist()
+        if len(col_names) > 1: 
+            for col in col_names: 
+                tie_break_score = new_df[col].max()
+                if tie_break_score > max_val: 
+                    col_names.remove(new_df[col].name)
+        matched_pairs[col_names[0]] = index
+        match_array.append((index, col_names[0]))
+    match_df = pd.DataFrame(match_array, columns=['ProdTest', 'TSTTest'])
+    #match_df.to_excel('match.xlsx')
+    
+    # filter data tables for repeat entries in TSTTest column 
+    corrected_matches, prod_test_mapping= remove_duplicates(match_df)
+    
+    # List of missing tests (seen in Prod env but not TST)
+    missing_testtypes = corrected_matches.loc[corrected_matches['TST'].isna()]
+    missing_testtypes.drop(['TST'], axis=1,inplace=True)
+    missing_testtypes.to_excel('missing_test.xlsx')
+    #print(list(missing_testtypes['ProdTest']))
+    return prod_test_mapping, list(missing_testtypes['ProdTest'])
+
+def remove_duplicates(df):
+    '''
+    After doing the initial match based on frequency, we are going to look at the 
+    tests that have duplicate matches to PROD environment and filter out the best 
+    matches 
+    '''
+    final_pattern = r'^(?=.*?- Final\b).+'
+    correction_results = r'^(?=.*?- Correction to results\b).+'
+    preliminary = r'^(?=.*?- Preliminary\b).+'
+    
+    # checking to see if there are any 'prelimanary' or 'Correction to results'
+    for index, row in df.iterrows(): 
+        tst, prod = str(row['TSTTest']), str(row['ProdTest'])
+        if re.match(final_pattern, prod) and re.match(final_pattern,tst): 
+            df.loc[index, 'TST'] = tst
+            #print('MATCHHH')
+        elif re.match(correction_results, prod) and re.match(correction_results,tst):
+            df.loc[index, 'TST'] = tst
+        elif re.match(preliminary, prod) and re.match(preliminary,tst):
+            df.loc[index, 'TST'] = tst
+        elif all([not re.match(preliminary, prod), re.match(preliminary, tst)]):
+            continue
+        elif all([not re.match(correction_results, prod), re.match(correction_results,tst)]):
+            continue
+        elif all([not re.match(final_pattern, prod), re.match(final_pattern,tst)]):
+            continue
+            # this condition says if both do not match pattern then its ok just continue
+        else: 
+            df.loc[index, 'TST'] = np.nan
+    #df.to_excel('Duplicate_matches.xlsx')
+    # finally make a key:value dictionary with Production ResultTest and TST ResultTest
+    prod_tst_mapping = {row['TST']: row['ProdTest'] for index, row in df.iterrows()}
+    df.drop(['TSTTest'], axis=1, inplace=True)
+    df.to_excel('OneToOne_Match.xlsx')
+    return df, prod_tst_mapping
+
+def frequency_table(df, column1, column2):
     '''
     A function that loops through a Merged dataframe. This merged dataframe is merged on the 
     accession number column, which results in having two ResultedTest columns. The function loops 
@@ -151,7 +228,6 @@ def test_match(df, column1, column2):
     SARSCov2            SARS Coronavirus+Like SARS
     SARSCov2            Influenza Virus A 
     ...                 ...
-    
     It takes the most frequently seen unique pairs and makes a dictionary that will be used as
     a key to filter out tests that do not match 
     '''
@@ -173,41 +249,5 @@ def test_match(df, column1, column2):
     # Now going to look at the the dictionary values and look inside the nested dictionary 
     # for counts and which ever counts is the most for that value pair I will use that as a match
     new_df = pd.DataFrame(counts)
-    '''
-    new_df structure:
-
-                                                SarsCov2        HepC SurfAnti A
-    SarsCoronaVirusLike::PROBE:ANT                  15               0
-
-    HepatitusC Surface Antingen::MOLC:ANTH          0                42
-
-    Code below is looping through each row and finding the column with the highest counts, if there
-    are 2 columns that have the same amount of counts it looks at both columns to see if there are 
-    any other rows within that column that have higher counts. If there are then it removes the column
-    name from the list of tie breaker columns 
-    '''
-    new_df.to_excel('Intermediate_match.xlsx')
-    matched_pairs = {}
-    match_array = []
-    for index, row in new_df.iterrows():
-        max_val = row.max()
-        col_names = row[row == max_val].index.tolist()
-        if len(col_names) > 1: 
-            for col in col_names: 
-                tie_break_score = new_df[col].max()
-                if tie_break_score > max_val: 
-                    col_names.remove(new_df[col].name)
-        matched_pairs[col_names[0]] = index
-        match_array.append((index, col_names[0]))
-    match_df = pd.DataFrame(match_array, columns=['ProdTest', 'TSTTest'])
-    
-    # Calculating string similarity score using fuzzywuzzy and 
-    # this will later be used to filter out duplicate matches
-    match_df['Ratio_score'] = match_df.apply(
-        lambda x: fuzz.token_ratio(x['ProdTest'], x['TSTTest']), 
-        axis=1
-        )
-    match_df.to_excel('match.xlsx')
-
-    return matched_pairs
+    return new_df
 

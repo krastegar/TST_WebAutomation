@@ -23,7 +23,7 @@ from util import (
 def main():
     # connecting python to microsoft access file
     # Need to input name of .accdb file to run pipe line
-    folder_path = r'C:\Users\krastega\Desktop\MicrosoftAccessDB' # will be used as an input 
+    folder_path = r'C:\Users\krastega\OneDrive - County of San Diego\Desktop\MicrosoftAcessDB' # will be used as an input 
     
     # only need 1 connection for TST .accdb file 
     conn, cursor = database_connection(folder_path=folder_path,
@@ -53,10 +53,11 @@ def main():
                           startswith='PROD')
     tst_df = combined_MM(folder_path=folder_path,
                           startswith='TST')
+    tst_df.to_excel('combined_tst.xlsx'); prod_df.to_excel('combined_prod.xlsx')
     # matching message monitor
     # I want to match on these columns(prod_df[['DILR_ResultTest', 'DILR Accession']])
     # need to mess with TST env accession numbers to get rid of leading 0000
-
+    #prod_df.to_excel('combined_prod.xlsx')
     # right join on Accession number to get matching from both datasets 
     merged_df = pd.merge(
          pd.DataFrame(tst_df[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
@@ -64,29 +65,44 @@ def main():
          on=['DILR_AccessionNumber'], 
          how='right'
          )
-    similarity_key = test_match(
+    similarity_key, missingProdTests = test_match( # used to be similarity key, but now is match df
          merged_df, 
          'DILR_ResultTest_x', 
          'DILR_ResultTest_y'
-         )
+         ) 
+    # taking out tests that are not seen in TST but seen in PROD
+    unseen_tests = prod_df[prod_df['DILR_ResultTest'].isin(missingProdTests)] 
+    #unseen_tests.to_excel('New_Prod.xlsx')
 
-    # transform matched resulted tests to their production names and 
-    # do a 'true match' on Accession Number and ResultedTest
-    # Using similarity_key dictionary to map ResultedTest 
+    # Transforming loinc code in tst to match prod environment 
     tst_df['DILR_ResultTest'].replace(similarity_key, inplace=True)
-    tst_df.to_excel('TransformedTST.xlsx')
-
+    #print(tst_df['DILR_ResultTest'])
     # performing match on accession number and ResultedTest
     new_findings = pd.merge(
         tst_df, 
         prod_df, 
         on= ['DILR_AccessionNumber', 'DILR_ResultTest'],
-        how='right')
-    new_findings.to_excel('MERGER.xlsx')
+        how='left')
 
-    # filtering production data frame based off of matched findings
-    filtered_df = prod_df[~prod_df.isin(new_findings[['DILR_AccessionNumber', 'DILR_ResultTest']])]
-    filtered_df.to_excel('Final.xlsx')
+    # These are the matches from prod_df to tst_df after changing the tst_df ResultTest 
+    # to match prod_df ResultTest
+    # issues with this is that we have ResultTests seen in TST environment that are not seen Prod
+
+    # going to filter out new_findings to get rid of tst not seen in prod
+    # test_matches = list(similarity_key.values())
+    # new_findings = new_findings[new_findings['DILR_ResultTest'].isin(test_matches)] 
+    # now I have finally found matches for ResultTest in TST and Prod...
+    # ...need to filter out these tests 
+
+    # going to filter out non matches of accession number on new findings 
+    missing_tests = prod_df[~prod_df['DILR_AccessionNumber'].isin(new_findings['DILR_AccessionNumber'])]
+    final_missing_report = pd.concat([missing_tests, unseen_tests], ignore_index=True)
+    final_missing_report.to_excel('final_missing_report.xlsx')
+
+    # comparing my final_report to marjorie's
+    mr_df = pd.read_excel('Palomar_Missing_Results_07MAR2023.xlsx')
+    compare_df = mr_df[~mr_df['PROD_AccessionNumber'].isin(final_missing_report['DILR_AccessionNumber'])]
+    compare_df.to_excel('compare.xlsx')
 
     return 
     
