@@ -3,31 +3,47 @@
 #   Purpose:
 #   Creating a program that will be able to take in RangeExports and IncomingMessageMonitor 
 #   Exports and automate making summary reports of the export files. 
-#    
+#   
+#   Algorithm:
+#       1. Find folder where .accdb file and message monitor (MM) excel files are located
+#       2. Create DB connection with TST range export (.accdb extension)      
+#       3. Extract data from TST range export and calculate completeness for specified fields
+#       4. Produce completeness report as an excel file called "completeness_report.xlsx"
+#       5. Combine all of the MM export from TST into a combined MM export, repeat this for PROD 
+#          exports
+#       6. Merge both combined dataframes and perform matching algorithm using test_match()
+#       7. Transform TST ResultTest types to there corresponding PROD test types based on matching
+#          algorithm
+#       8. Remove unseen test types in PROD that were not seen in TST and perform merge on DILR_ResultTest and DILR_AccessionNumber
+#       9. Subtract the ones that are seen both PROD and TST 
+#
 #   Author: Kiarash Rastegar
 #   Date: 2/27/23
 #-------------------------------------------------------------------------------------------
 
-import os
 import sys 
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+
 from util import (
     tstRangeQuery_demographic,
     tstRangeQuery_lab, 
     completeness_report, 
     database_connection,
     combined_MM,
-    test_match
+    test_match,
+    sanity_check,
+    missing_test_report
 )
+
 def main():
+    
     # connecting python to microsoft access file
     # Need to input name of .accdb file to run pipe line
     folder_path = r'C:\Users\krastega\OneDrive - County of San Diego\Desktop\MicrosoftAcessDB' # will be used as an input 
     
     # only need 1 connection for TST .accdb file 
-    conn, cursor = database_connection(folder_path=folder_path,
-                                       file_name='TST_DIE_02132023_03072023_exp022323')
+    conn, _ = database_connection(folder_path=folder_path,
+                                       file_name='TST_DIE_04112023_04192023')
 
     # Going to make one excel sheet with completeness reports from both demographic 
     # and lab information
@@ -53,11 +69,8 @@ def main():
                           startswith='PROD')
     tst_df = combined_MM(folder_path=folder_path,
                           startswith='TST')
-    tst_df.to_excel('combined_tst.xlsx'); prod_df.to_excel('combined_prod.xlsx')
-    # matching message monitor
-    # I want to match on these columns(prod_df[['DILR_ResultTest', 'DILR Accession']])
-    # need to mess with TST env accession numbers to get rid of leading 0000
-    #prod_df.to_excel('combined_prod.xlsx')
+    prod_df.reset_index(inplace=True); tst_df.reset_index(inplace=True)
+    prod_df.to_excel('combined_prod.xlsx'); tst_df.to_excel('combined_tst.xlsx')
     # right join on Accession number to get matching from both datasets 
     merged_df = pd.merge(
          pd.DataFrame(tst_df[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
@@ -65,47 +78,38 @@ def main():
          on=['DILR_AccessionNumber'], 
          how='right'
          )
-    similarity_key, missingProdTests = test_match( # used to be similarity key, but now is match df
+    similarity_key, prodTestsMissingInTST, one2one_df = test_match( # used to be similarity key, but now is match df
          merged_df, 
          'DILR_ResultTest_x', 
          'DILR_ResultTest_y'
          ) 
-    # taking out tests that are not seen in TST but seen in PROD
-    unseen_tests = prod_df[prod_df['DILR_ResultTest'].isin(missingProdTests)] 
-    #unseen_tests.to_excel('New_Prod.xlsx')
-
+    matched_tst2prod = list(one2one_df['TST'].unique())
     # Transforming loinc code in tst to match prod environment 
     tst_df['DILR_ResultTest'].replace(similarity_key, inplace=True)
-    #print(tst_df['DILR_ResultTest'])
+
     # performing match on accession number and ResultedTest
+    # These are the matches from tst_df to prod_df after changing the tst_df ResultTest 
     new_findings = pd.merge(
         tst_df, 
         prod_df, 
         on= ['DILR_AccessionNumber', 'DILR_ResultTest'],
-        how='left')
+        how='left', # change this back to left to match previous results
+        indicator=True)
+    new_findings.reset_index(inplace=True)
 
-    # These are the matches from prod_df to tst_df after changing the tst_df ResultTest 
-    # to match prod_df ResultTest
-    # issues with this is that we have ResultTests seen in TST environment that are not seen Prod
-
-    # going to filter out new_findings to get rid of tst not seen in prod
-    # test_matches = list(similarity_key.values())
-    # new_findings = new_findings[new_findings['DILR_ResultTest'].isin(test_matches)] 
-    # now I have finally found matches for ResultTest in TST and Prod...
-    # ...need to filter out these tests 
+    # Creating missing test report from test seen in TST env but not seen in PROD
+    # Also test seen in PROD but not seen in TST 
+    _ = missing_test_report(tst_df,prod_df, prodTestsMissingInTST, matched_tst2prod)
 
     # going to filter out non matches of accession number on new findings 
-    missing_tests = prod_df[~prod_df['DILR_AccessionNumber'].isin(new_findings['DILR_AccessionNumber'])]
-    final_missing_report = pd.concat([missing_tests, unseen_tests], ignore_index=True)
-    final_missing_report.to_excel('final_missing_report.xlsx')
-
-    # comparing my final_report to marjorie's
-    mr_df = pd.read_excel('Palomar_Missing_Results_07MAR2023.xlsx')
-    compare_df = mr_df[~mr_df['PROD_AccessionNumber'].isin(final_missing_report['DILR_AccessionNumber'])]
-    compare_df.to_excel('compare.xlsx')
-
-    return 
+    final_missing_report = prod_df[~prod_df['DILR_AccessionNumber'].isin(new_findings['DILR_AccessionNumber'])]
     
+    # See how this compares with combined tst dataframes  
+    result_check = sanity_check(prod_df, tst_df, final_missing_report)
+    _ = None
+
+    # Cross Comparison with Marjorie missing list 
+
 
 if __name__=="__main__":
     sys.exit(main())
