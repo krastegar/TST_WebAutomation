@@ -83,7 +83,7 @@ def main():
          'DILR_ResultTest_x', 
          'DILR_ResultTest_y'
          ) 
-    matched_tst2prod = list(one2one_df['TST'].unique())
+
     # Transforming loinc code in tst to match prod environment 
     tst_df['DILR_ResultTest'].replace(similarity_key, inplace=True)
 
@@ -99,7 +99,7 @@ def main():
 
     # Creating missing test report from test seen in TST env but not seen in PROD
     # Also test seen in PROD but not seen in TST 
-    _ = missing_test_report(tst_df,prod_df, prodTestsMissingInTST, matched_tst2prod)
+    _ = missing_test_report(tst_df,prod_df, prodTestsMissingInTST)
 
     # going to filter out non matches of accession number on new findings 
     final_missing_report = prod_df[~prod_df['DILR_AccessionNumber'].isin(new_findings['DILR_AccessionNumber'])]

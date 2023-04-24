@@ -13,7 +13,6 @@ import numpy as np
 import pyodbc
 import os
 import re
-import numpy as np 
 
 def tstRangeQuery_lab(
         test_center_1, 
@@ -113,9 +112,8 @@ def completeness_report(query, conn):
     nonNullCounts = df.count()
     
     # Calculating Percentage of complete information from those values. 
-    difCounts = np.absolute(null_counts.values-nonNullCounts.values)
-    total_num = null_counts.values+nonNullCounts.values
-    percent_complete = (difCounts/total_num)*100
+    total_num = null_counts.values+nonNullCounts.values #(.values are arrays of values)
+    percent_complete = (nonNullCounts.values/total_num)*100
 
     # Lab df done 
     lab_df = pd.DataFrame(
@@ -204,7 +202,8 @@ def test_match(df, column1, column2):
     
     # List of missing tests (seen in Prod env but not TST) 
     # I added the cases of mismatched preliminary vs final vs correction to the missing test list
-    missing_testtypes = [missing_test.append(test) for test in mismatch_test]
+    # using list comprehension to combine both missing tests and mismatch test 
+    _ = [missing_test.append(test) for test in mismatch_test]
 
     # I added an indicator showing why that there are some test are marked as 'missing' even though
     # a few of the accession numbers were seen in both PROD and TST message monitors 
@@ -303,7 +302,7 @@ def frequency_table(df, column1, column2):
     # going to look at the empty column of new_df and use those index's 
     # that have only empty entries as missing and put those as missing test types
 
-    new_df.columns = new_df.columns.fillna('N/A') # position 1 has a column name that is np.nan, the position is variable so lets see what is going on 
+    new_df.columns = new_df.columns.fillna('N/A') # changing empty column name to N/A
     all_other_cols = [col for col in new_df.columns if col != 'N/A']
     missing_test = []
     for index, row in new_df.iterrows():
@@ -348,7 +347,7 @@ def sanity_check(prod_df, tst_df, final_missing_report):
 
     return final_missing_report
 
-def missing_test_report(tst_df, prod_df, prodTestsMissingInTST, matched_tst2prod):
+def missing_test_report(tst_df, prod_df, prodTestsMissingInTST):
     '''
     Function is made to make a missing test report from both tests seen in TST
     and not in PROD and visa versa. 
@@ -362,12 +361,7 @@ def missing_test_report(tst_df, prod_df, prodTestsMissingInTST, matched_tst2prod
     # Unique Test Results seen in both TST and PROD 
     tst_unique = list(np.unique(tst_df['DILR_ResultTest']))
     prod_unique = list(np.unique(prod_df['DILR_ResultTest']))
-    '''
-    print("\nPROD TESTS: \n")
-    [print(prod) for prod in prod_unique]
-    print("\nTST TESTS: \n")
-    [print(tst) for tst in tst_unique]
-    '''
+
     tst_notProd = []
     for test in tst_unique:
         if test not in prod_unique:
