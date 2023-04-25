@@ -8,12 +8,13 @@ from selenium.common.exceptions import (
     TimeoutException
     )
 from IMM import IMM
+import ssl
+import urllib
 
 
 def main(): 
     # Path for log file
     # log_path = os.path.expanduser('~') + '/Desktop'
-    
     # initializing logging file 
     logging.basicConfig(filename='Log_Info.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
@@ -24,6 +25,17 @@ def main():
     EndDate = str(input("Please enter end date of TST export: "))
     LabName = str(input('Please enter the lab name that you want to validate: '))
 
+    logging.info(
+        f'''
+        ------ User Parameters ------ 
+        USER_NAME : {username}
+        PASSWORD : {password}
+        START_DATE : {FromDate}
+        END_DATE : {EndDate}
+        LAB_NAME : {LabName}
+        ----------------------------- 
+        '''
+    )
     try:
         # process start 
         logging.info('Starting the process....')
@@ -36,12 +48,13 @@ def main():
             FromDate= FromDate, #'02/13/2023',
             ToDate= EndDate, #'02/24/2023',
             LabName= LabName #"Palomar Health Downtown Campus Laboratory NEW"
-            # LOGAN HEIGHTS FAMILY HEALTH CENTER LAB NEW
-            # Palomar Health Downtown Campus Laboratory NEW
             )
-        # setup = report.install()
+        # maybe try installing first to fix tsl/ssl issue 
+        setup = report.install()
+
+        # Running entire program
         di = report.hl7_copy()
-        break_pt = None
+       
     except NoSuchElementException as ne:
         # Log the error traceback
         logging.exception("An error occurred, check Log_info.log: %s", ne)
@@ -57,7 +70,7 @@ def main():
     logging.info('Process Complete...')
     '''
 krastegar
-Hamid&Mahasty1
+Hamid&Mahasty2
 02/13/2023
 02/24/2023
 LOGAN HEIGHTS FAMILY HEALTH CENTER LAB NEW

@@ -320,7 +320,7 @@ class HL7_extraction(DI_Search, IMM):
     def hl7_report(self, resultTest, acc_num, di_num,df):
         home_directory = os.path.expanduser( '~' )
         lab_name = re.sub(r'[^\w\s]+', '_',self.lab)
-        new_dir = f'{home_directory}/Desktop/{lab_name}/'
+        new_dir = f'{home_directory}/Downloads/{lab_name}/'
         try:
             mkdir = os.mkdir(new_dir)
         except FileExistsError:
