@@ -22,15 +22,6 @@ class SetUp:
         self.paswrd = paswrd
         self.fromDate = FromDate
         self.toDate = ToDate
-    
-    def install(self): 
-        '''
-        If webdriver is not installed already this function will install it 
-        via python commands 
-        '''
-        service = ChromeService(executable_path="chromedriver.exe")
-        driver = webdriver.Chrome(service=service)
-        return driver
 
 
     def login(self): 
@@ -42,16 +33,19 @@ class SetUp:
         WebCMR (Production)
         '''
         # create chrome webdriver object with the above options
-        driver=self.install()
+        service = ChromeService(executable_path="chromedriver.exe")
+        driver = webdriver.Chrome(service=service)
 
-        website = driver.get(self.url)
+        # go to TST website
+        driver.get(self.url)
+
         # Find the username and password elements and enter login credentials
-        time.sleep(1)
+        # time.sleep(1)
         username = driver.find_element(By.ID, value="txtUsername")
         username.send_keys(self.username)
         password = driver.find_element(By.ID, value="txtPassword")
         password.send_keys(self.paswrd)
-        time.sleep(.5)
+        # time.sleep(.5)
         password.send_keys(Keys.RETURN)
         
         return driver

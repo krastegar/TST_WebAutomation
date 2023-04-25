@@ -8,8 +8,6 @@ from selenium.common.exceptions import (
     TimeoutException
     )
 from IMM import IMM
-import ssl
-import urllib
 
 
 def main(): 
@@ -49,8 +47,6 @@ def main():
             ToDate= EndDate, #'02/24/2023',
             LabName= LabName #"Palomar Health Downtown Campus Laboratory NEW"
             )
-        # maybe try installing first to fix tsl/ssl issue 
-        setup = report.install()
 
         # Running entire program
         di = report.hl7_copy()

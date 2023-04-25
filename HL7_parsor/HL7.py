@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import numpy as np
 import logging
-
+import time
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support.wait import WebDriverWait
@@ -51,6 +51,7 @@ class HL7_extraction(DI_Search, IMM):
                     di_num = int(di_num_list[i])
 
                     logging.info("Inputting ResultedTest and Accession numbers in IMM search boxes")
+
                     acc_box, test_search = self.acc_test_search(driver, acc_num, resultTest)
 
                     # Copy and filter hl7 results
