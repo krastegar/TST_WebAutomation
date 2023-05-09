@@ -94,6 +94,7 @@ class IMM(SetUp):
             xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[5]/tbody/tr[3]/td'
         )
         desired_option.click()
+        return
     
     def imm_search(self): 
         '''
