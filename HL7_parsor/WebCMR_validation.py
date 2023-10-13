@@ -64,13 +64,7 @@ def main():
         input('Check log info...press enter after complete.')
     
     logging.info('Process Complete...')
-    '''
-krastegar
-Hamid&Mahasty2
-02/13/2023
-02/24/2023
-LOGAN HEIGHTS FAMILY HEALTH CENTER LAB NEW
-    '''
+
     return
 
 if __name__=="__main__":

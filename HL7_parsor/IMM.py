@@ -10,7 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 
 
 class IMM(SetUp): 
@@ -197,7 +197,6 @@ class IMM(SetUp):
 
     def export_df(self): 
         
-
         download_folder = self.download_folder()
         
         # Reading in the most recently downloaded excel file from downloads folder
@@ -226,7 +225,10 @@ class IMM(SetUp):
                                                         ].apply(self.classify_column)
         
         # Final filter of df based on classification column and ResultedTest
-        # filtered_import.to_excel('test.xlsx')
+        # Although we kept all of the unique combinations of DILR_ResultValue and ResultedTest after classification
+        # We might have multiple numeric values and we would not want to look at every single one so instead we
+        # only look at one example of this classification for each ResultedTest and that is also why we split the 
+        # data into two dataframes and recombine them (because we only want one example of ERROR and Numeric)
         num_error = filtered_import[filtered_import['Classification'].isin(['ERROR', 'Numeric'])]
         num_error.drop_duplicates(subset=['DILR_ResultedTest','Classification'],
                                                         keep='last',
@@ -235,7 +237,7 @@ class IMM(SetUp):
         
         # Combine dataframe 
         final_df = pd.concat([categorical_df, num_error], ignore_index=True)
-        final_df.to_excel('test.xlsx')
+        final_df.to_excel('ELR_Validation_Search_Summary.xlsx')
 
         return final_df
 
@@ -262,26 +264,31 @@ class IMM(SetUp):
                 else:
                     # Return 'Categorical' for other cases
                     return 'Categorical'
-    def multiFind(self, driver, element_id, xpath=None, field_name=None ):
-        
+    def multiFind(self, driver, element_id, xpath=None, field_name=None):
+         
         '''
         Function is meant to locate regions on html web page, 
         using the elements ID as a identifier. If element is not found 
         by ID, function will attempt to find it by XPath.
         '''
-        wait = WebDriverWait(driver, 2)
+        
+        wait = WebDriverWait(driver, 1)
         try: 
             element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
-        except NoSuchElementException:
+        except TimeoutException:
+            #time.sleep(3)
             if xpath:
-                # this is the full or relative xpath 
-                element_btn = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-            elif field_name: 
-                # field name is a fail-safe to find element if the id by itself is not working
-                # typing in the filed name will remind me which section to look at if it breaks
-                # this is using a partial xpath to find element
-                element_btn = wait.until(EC.presence_of_element_located((By.XPATH, f"//*[contains(@id, {element_id})]")))
-            else:
-                raise NoSuchElementException(f"Element with ID {element_id} and XPath {xpath} not found.")
-        
-        return element_btn
+                try: 
+                    element_btn = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                except: 
+                    pass
+            if field_name:
+                try: 
+                    element_btn = wait.until(EC.presence_of_element_located((By.XPATH, field_name)))
+                except: 
+                    pass  
+            else: print(f'Cannot locate desired field or tab')
+        except ElementClickInterceptedException: 
+            self.alert_handling(driver)
+
+        return element_btn  

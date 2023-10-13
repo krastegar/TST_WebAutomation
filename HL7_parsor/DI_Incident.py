@@ -12,7 +12,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import (TimeoutException, 
+                                        NoSuchElementException, 
+                                        ElementClickInterceptedException)
 
 class DI_Search(IMM, SetUp): 
 
@@ -41,7 +43,7 @@ class DI_Search(IMM, SetUp):
         di_num = int(di_num_list[i])
             
         # navigating to disease incidents tab
-        logging.info('Clicking Disease Incident tab')
+        logging.info(f'Clicking Disease Incident tab \n DI_num: {di_num}')
         DI_tab = driver.find_element(By.ID, 'ibtnTabDisInc')
         DI_tab.click()
             
@@ -143,9 +145,12 @@ class DI_Search(IMM, SetUp):
             # Navigate to lab tab 
         logging.info('Switching to Lab Tab')
         lab_tab_id = 'ctl37_btnSupplementalTabSYS'
-        lab_tab = driver.find_element(By.ID, lab_tab_id)
+        lab_tab = self.multiFind(driver=driver,
+                                 element_id= lab_tab_id,
+                                 xpath='//*[@value="Laboratory Info"]',
+                                 field_name='//*[@value="Laboratory"]')
         lab_tab.click()
-        #time.sleep(5)
+        #time.sleep(60)
         '''
         # skip if there is not any info on lab tab
         x = input('Is there info on lab tab (y/n)?...')
@@ -160,126 +165,139 @@ class DI_Search(IMM, SetUp):
          '''
         logging.info('Grabbing information from Lab Tab')
             # accession number
+        logging.info('getting accession number')
         acc_num = self.extract_info(
             driver=driver, 
             element_id='_-11_ctl03_dgLabInfo_ctl02_txtAccNum', 
-            field_name='Accession Number'
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtAccNum"]'
             )
             # Specimen Collected Date
+        logging.info('getting specimen collected date')
         specimen_collect_date = self.extract_info(
             driver = driver,
             element_id="_-11_ctl03_dgLabInfo_ctl02_txtSpecCollDate",
-            field_name='Specimen Collection Date'
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtSpecCollDate"]'
             )
             # Specimen Received Date 
+        logging.info('getting specimen received date')
         specimen_received_date = self.extract_info(
             driver=driver,
             element_id= "_-11_ctl03_dgLabInfo_ctl02_txtSpecReceDate",
-            field_name='Specimen Receive Date'
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtSpecReceDate"]'
             )
             # Specimen Source
+        logging.info('getting specimen source')
         specimen_source = self.extract_info(
             driver = driver,
             element_id="_-11_ctl03_dgLabInfo_ctl02_txtSpecimenSourceText",
-            field_name='Specimen Source'
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtSpecimenSourceText"]'
             )
             # Resulted Test
+        logging.info('getting resulted test ')
         resulted_test = self.extract_info(
             driver = driver,
             element_id="_-11_ctl03_dgLabInfo_ctl02_txtResultedTest",  # might need to change id back to put 'L' at the end
-            field_name='Resulted Test', 
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganism"]', 
             xpath='//*[@id="_-11_ctl03_dgLabInfo_ctl02_txtResultedTestL"]'
             )
             # result
+        logging.info('getting result section')
         result = self.extract_info(
             driver = driver,
             element_id="_-11_ctl03_dgLabInfo_ctl02_txtResult", # might need to change id back to put 'L' at the end
-            field_name='Result',
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtResult"]',
             xpath='//*[@id="_-11_ctl03_dgLabInfo_ctl02_txtResult"]'
             )
             # resulted organism 
+        logging.info('getting resulted organism')
         result_organism = self.extract_info(driver, 
             element_id="_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganism",
-            field_name= 'Resulted Organism',
+            field_name= '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganism"]',
             xpath= '//*[@id="_-11_ctl03_dgLabInfo_ctl02_txtResultedOrganismL"]'
             )
             # units
+        logging.info('getting units info')
         units = self.extract_info(
             driver = driver, 
-            element_id='_-11_ctl03_dgLabInfo_ctl02_txtUnits',
-            field_name='Units'
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtUnits'
             )
             # Reference Range
+        logging.info('getting reference range')
         ref_range = self.extract_info(
             driver = driver,
-            element_id='_-11_ctl03_dgLabInfo_ctl02_txtReferencerange',
-            field_name='Reference Range'
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtReferencerange'
             )
             # Result date
+        logging.info('getting result date')
         result_date = self.extract_info(
             driver = driver, 
-            element_id='_-11_ctl03_dgLabInfo_ctl02_txtResultDate',
-            field_name= 'Result Date'
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtResultDate'
             )
             # Performing facility ID, 
+        logging.info('getting performing facility id')
         perform_facility_id = self.extract_info(
             driver,
-            element_id='_-11_ctl03_dgLabInfo_ctl02_txtPerformingFacilityID',
-            field_name='Performing Facility ID'
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtPerformingFacilityID'
             )
             # Abnormal Flag
+        logging.info('getting abnormal flag')
         ab_flag = self.dropDown_extract(
             driver=driver,
             select_id='_-11_ctl03_dgLabInfo_ctl02_ddlAbnormalFlag',
             menu_id='_-11_ctl03_dgLabInfo_ctl02_ddlAbnormalFlag'
             )
             # Observation Ressults
+        logging.info('getting observation results.')
         ob_results = self.dropDown_extract(
             driver=driver,
             select_id='_-11_ctl03_dgLabInfo_ctl02_ddlObservationResultStat',
             menu_id= '/html/body/form/div[2]/div/div/table[2]/tbody/tr[5]/td/table/tbody/tr/td/div/div/table/tbody/tr/td/table/tbody/tr[1]/td/div[1]/table[2]/tbody/tr[10]/td/table/tbody/tr[4]/td[1]/div[1]/select')
 
             # Provider name
+        logging.info('getting provider name')
         provider_name = self.extract_info(
             driver=driver,
-            element_id= '_-11_ctl03_dgLabInfo_ctl02_txtProviderName',
-            field_name='Provider Name'
+            element_id= '_-11_ctl03_dgLabInfo_ctl02_txtProviderName'
             )
             # Order callback number
+        logging.info('getting provider number')
         provider_number = self.extract_info(
             driver = driver,
-            element_id='_-11_ctl03_dgLabInfo_ctl02_txtProviderCallBack',
-            field_name='Provider Number'
+            element_id='_-11_ctl03_dgLabInfo_ctl02_txtProviderCallBack'
             )
             # Provider address 
+        logging.info('getting provider address')
         list_of_addressIDs = [
-                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderAddress', 'Address'],
-                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderCity', 'City'],
-                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderState','State'],
-                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip', 'Zip']
+                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderAddress', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtProviderAddress"]'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderCity', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtProviderCity"]'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtProviderState','//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtProviderState"]'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtProviderState"]']
                 ]
         provider_address = self.address(driver, list_of_addressIDs)
 
             # Facility name 
+        logging.info('getting facility name')
         facility_name = self.extract_info(
             driver = driver,
             element_id='_-11_ctl03_dgLabInfo_ctl02_txtFacilityName',
-            field_name= 'FacilityName')
+            field_name='//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtFacilityName"]')
             
             # Facility address
+        logging.info('getting facility address')
         facility_address_ids = [
-                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityAddress', 'Address'],
-                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityCity', 'City'],
-                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityState', 'State'],
-                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip', 'Zip']
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityAddress', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtFacilityName"]'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityCity', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtFacilityCity"]'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityState', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtFacilityState"]'],
+                ['_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip', '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtFacilityZip"]']
             ]
         facility_address = self.address(driver, facility_address_ids)
 
             # Facility phone number
+        logging.info('getting facility phone number')
         facility_phone = self.extract_info(
             driver=driver,
             element_id='_-11_ctl03_dgLabInfo_ctl02_txtFacilityPhone',
-            field_name='Facility Phone'
+            field_name= '//*[@id="CRELab_-11_ctl03_dgLabInfo_ctl02_txtFacilityPhone"]'
             )
             # have to click cancel after I am done with getting information from both tabs
         logging.info('Finished grabbing information from WebCMR website')
@@ -401,26 +419,37 @@ class DI_Search(IMM, SetUp):
                 raise NoSuchElementException(f"Menu with ID {menu_id} and Select with {select_id} not found.")
         text = selected_option.text
         return text
-    def extract_info(self, driver, element_id, xpath=None, field_name=None ):
+    
+    def extract_info(self, driver, element_id, xpath=None, field_name=None):
         
         '''
-        Function is meant to extract information from text boxes, 
+        Function is meant to locate regions on html web page, 
         using the elements ID as a identifier. If element is not found 
-        by ID, function will attempt to find it by XPath.
+        by ID, function will attempt to find it by XPath and return the 
+        text value of that element. 
         '''
+        
+        wait = WebDriverWait(driver, 1)
         try: 
-            element_btn = driver.find_element(By.ID, element_id)
-        except NoSuchElementException:
+            element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
+            value = element_btn.get_attribute('value')
+            return value
+        except TimeoutException:
+
             if xpath:
-                element_btn = driver.find_element(By.XPATH, xpath)
-            elif field_name: 
-                # field name is a fail-safe to find element if the id by itself is not working
-                # typing in the filed name will remind me which section to look at if it breaks
-                element_btn = driver.find_element(By.XPATH, f"//*[contains(@id, {element_id})]")
-                print(f'Except Block: {field_name}')
-            else:
-                raise NoSuchElementException(f"Element with ID {element_id} and XPath {xpath} not found.")
-        
-        value = element_btn.get_attribute('value')
-        
-        return value
+                try: 
+                    element_btn = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                    value = element_btn.get_attribute('value')
+                    return value
+                except: 
+                    pass
+            if field_name:
+                try: 
+                    element_btn = wait.until(EC.presence_of_element_located((By.XPATH, field_name)))
+                    value = element_btn.get_attribute('value')
+                    return value
+                except: 
+                    print(f'Cannot locate desired field:\n {field_name}')
+            
+        except ElementClickInterceptedException: 
+            self.alert_handling(driver)

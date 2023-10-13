@@ -46,9 +46,9 @@ class HL7_extraction(DI_Search, IMM):
                 try: 
                     # Searching IMM for specific accession numbers 
                     # Going to have to put this in a for loop 
-                    acc_num = int(acc_num_list[i])
+                    acc_num = str(acc_num_list[i])
                     resultTest = str(test_list[i])
-                    di_num = int(di_num_list[i])
+                    di_num = str(di_num_list[i]) 
 
                     logging.info("Inputting ResultedTest and Accession numbers in IMM search boxes")
 
@@ -115,9 +115,9 @@ class HL7_extraction(DI_Search, IMM):
                     report = self.hl7_report(resultTest, acc_num, di_num,webCMR_hl7_df)
             except StaleElementReferenceException as e:
                 continue
-        home_directory = os.path.expanduser( '~' )
+        #home_directory = os.path.expanduser( '~' )
         lab_name = re.sub(r'[^\w\s]+', '_',self.lab)
-        new_dir = f'{home_directory}/Desktop/{lab_name}'
+        new_dir = f'./{lab_name}/'
         query_df = df.to_excel(f'{new_dir}/query_summary.xlsx')
     
 
@@ -149,31 +149,43 @@ class HL7_extraction(DI_Search, IMM):
         return acc_box,test_search
 
     def data_wrangling(self, driver, resultTest, acc_num): 
-        # Get HL7 from contents area after IMM search 
-        table = driver.find_element(By.ID, "divContentsArea").text
-        hl7_sections = table.split('\n')
-        components = [section.split("|") for section in hl7_sections]
-        df = pd.DataFrame(components)
         
-        obx_indx, obr_indx, spm_indx = [], [], []
-        for index, section in enumerate(list(df[0].values)):
-            if section == 'OBR':
-                obr_indx.append(index)
-            elif section == 'OBX': 
-                obx_indx.append(index)
-            elif section == 'SPM': 
-                spm_indx.append(index)
-            else: continue 
+        df, obx_indx, obr_indx, spm_indx = self.hl7_redoSearch(driver, resultTest, acc_num)
         
         print(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
-        
+        #print(resultTest)
         try:
             assert len(obr_indx) == len(obx_indx) == len(spm_indx)
+            
             # Going to check which OBX test result matches the imported test result
             column = 3 # OBX 3 is the column that contains resulted test 
-            key = self.match_obx(resultTest, df, obx_indx, column)
+            key = self.match_obx(resultTest, df, obx_indx, column)  
+            
+            if key == 0: # there was an issue with a search if this value is 0
+                # going to redo search if the initial search does not provide HL7 message
+                logging.info('No OBX section found....redoing search')
+                print('No OBX section found....redoing search')
+
+                # issue is usually caused by brackets being in the resultTest name 
+                resultTest = re.sub(r'\[.*?\]', '', resultTest) # removes brackets and anything inside of them
+
+                # redoing initial hl7 search 
+                df, obx_indx, obr_indx, spm_indx = self.hl7_redoSearch(driver, resultTest, acc_num)
+                key = self.match_obx(resultTest, df, obx_indx, column)
+                
+                #print(f'Key after match_box(): {key}')
+                # finding the obr, obx, and spm sections that are corresponding to incoming message monitor 
+                # ResultedTest value
+                pos = obx_indx.index(key)
+                df_idx = [obr_indx[pos], obx_indx[pos], spm_indx[pos]]
+
+
+            # finding the obr, obx, and spm sections that are corresponding 
+            # to incoming message monitor ResultedTest value
             pos = obx_indx.index(key)
             df_idx = [obr_indx[pos], obx_indx[pos], spm_indx[pos]]
+
+
         except AssertionError:
             column = 3
             key = self.match_obx(resultTest, df, obx_indx, column)
@@ -294,6 +306,32 @@ class HL7_extraction(DI_Search, IMM):
         self.go_home(driver)
 
         return hl7_values, hl7_section_label
+
+    def hl7_redoSearch(self, driver, resultTest, acc_num):
+        '''
+        Function is meant to redo a search for hl7 message if there are no results 
+        searching for the resultedTest and accession number in Incoming Message monitor page. 
+        '''
+        self.nav2IMM(driver=driver)
+        time.sleep(1)
+        self.acc_test_search(resultTest=resultTest,
+                                acc_num=acc_num,
+                                driver=driver)
+        # Get HL7 from contents area after IMM search 
+        table = driver.find_element(By.ID, "divContentsArea").text
+        hl7_sections = table.split('\n')
+        components = [section.split("|") for section in hl7_sections]
+        df = pd.DataFrame(components)
+        obx_indx, obr_indx, spm_indx = [], [], []
+        for index, section in enumerate(list(df[0].values)):
+            if section.upper() == 'OBR':
+                obr_indx.append(index)
+            elif section.upper() == 'OBX': 
+                obx_indx.append(index)
+            elif section.upper() == 'SPM': 
+                spm_indx.append(index)
+            else: continue 
+        return df, obx_indx, obr_indx, spm_indx
     
     def get_accession(self, string ):
         'Return first part of SPM 2 that is seen before accession #'
@@ -306,7 +344,7 @@ class HL7_extraction(DI_Search, IMM):
         elif spm == obx:
             sp_collect = f'SPM-17 & OBX-14 is {obx}, while OBR-7 is {obr}'
         elif spm == obr:
-            sp_collect = f'SPM-17 & OBR-7 is {spm}, while OBR-7 is {obx}'
+            sp_collect = f'SPM-17 & OBR-7 is {spm}, while OBX-14 is {obx}'
         elif obx == obr:
             sp_collect = f'OBX-14 & OBR-7 is {obr}, while SPM-17 is {spm}'
         else:
@@ -328,13 +366,16 @@ class HL7_extraction(DI_Search, IMM):
             pass 
         file_name = re.sub(r'[^\w\s]+', '_', resultTest)
         file_dir = f'{new_dir}/{file_name}'
-        df.to_excel(f'{file_dir}_ACCnum_{acc_num}_DInum_{di_num}.xlsx')
+        df.to_excel(f'{file_dir}_ACCnum_{acc_num}_DInum_{int(di_num)}.xlsx')
 
-    def match_obx(self, resultTest, df, obx_indx, column):
-        key : int = 0
+    def match_obx(self, resultTest : str, df : pd.DataFrame, obx_indx : int, column : int):
+        key = 0
         for row_index in obx_indx: 
             obx_result : str = str(df.iloc[row_index, column])
             if resultTest in obx_result:
-                # print(f'Found the Index: {row_index}') 
+                #print(f'\nFound the Index: {row_index}\n') 
                 key = int(row_index)
+                print(f'Return Key in if-else: {key}')
+                break
+        print(f'Return value: {key}')
         return key
