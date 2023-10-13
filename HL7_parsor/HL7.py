@@ -48,7 +48,7 @@ class HL7_extraction(DI_Search, IMM):
                     # Going to have to put this in a for loop 
                     acc_num = str(acc_num_list[i])
                     resultTest = str(test_list[i])
-                    di_num = str(di_num_list[i]) 
+                    di_num = int(di_num_list[i]) 
 
                     logging.info("Inputting ResultedTest and Accession numbers in IMM search boxes")
 
