@@ -5,7 +5,8 @@ from HL7 import HL7_extraction
 from selenium.common.exceptions import (
     NoSuchElementException, 
     StaleElementReferenceException,
-    TimeoutException
+    TimeoutException,
+    SessionNotCreatedException
     )
 from IMM import IMM
 
@@ -58,11 +59,12 @@ def main():
     except StaleElementReferenceException as se:
         logging.exception("An error occurred, check Log_info.log: %s", se)
         input('Check log info...press enter after complete')
-
     except TimeoutException as te:
         logging.exception("An error occurred, check Log_info.log: %s", te)
         input('Check log info...press enter after complete.')
-    
+    except SessionNotCreatedException as noSession: 
+        logging.exception("An error occurred, check Log_info.log: %s", noSession)
+
     logging.info('Process Complete...')
 
     return
