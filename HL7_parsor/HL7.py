@@ -147,7 +147,7 @@ class HL7_extraction(DI_Search, IMM):
     def data_wrangling(self, driver, resultTest, acc_num): 
         
         df, obx_indx, obr_indx, spm_indx = self.hl7_redoSearch(driver, resultTest, acc_num)
-        
+        logging.info(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
         print(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
         #print(resultTest)
         try:
@@ -371,7 +371,7 @@ class HL7_extraction(DI_Search, IMM):
             if resultTest in obx_result:
                 #print(f'\nFound the Index: {row_index}\n') 
                 key = int(row_index)
-                print(f'Return Key in if-else: {key}')
+                #print(f'Return Key in if-else: {key}')
                 break
-        print(f'Return value: {key}')
+        #print(f'Return value: {key}')
         return key
