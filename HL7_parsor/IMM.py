@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 
 
 class IMM(SetUp): 
@@ -30,26 +31,70 @@ class IMM(SetUp):
         This method is used for logging into TSTWebCMR and going to 
         Incoming Message Monitor page 
         '''
+        # login and go to home page
         driver = self.login()
         # Navigating the dropdown menu to go into IMM
         self.nav2IMM(driver)
         return driver 
+    
+    def go_home(self, driver):
+        '''
+        Method is meant to navigate back home, using home icon button
+        to get there
+        '''
+        # Clicking home button 
+        home_btn = self.multiFind(
+            driver = driver, 
+            element_id='FragTop1_lbtnHome',
+            xpath= '/html/body/form/table[2]/tbody/tr/td[1]/div/a'
+            )
+        home_btn.click()
 
+        # Clicking Search button (this is the investigators equivalent of my home button)
+        investigators_search = self.multiFind(
+            driver=driver,
+            element_id='FragTop1_mnuMain-menuItem002',
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[36]/tbody/tr/td[1]'
+        )
+        investigators_search.click()
+        return
+    
     def nav2IMM(self, driver):
+        '''
+        Only works if you are at the home page and want to navigate to IMM menu
+        '''
+        # Navigating back to home page
+        self.go_home(driver)
+
+        # Looking at Administrator dropdown menu
         wait = WebDriverWait(driver, 8)
-        dropdown_menu = wait.until(EC.presence_of_element_located((By.ID, "FragTop1_mnuMain-menuItem017")))
+        #dropdown_menu = wait.until(EC.presence_of_element_located((By.ID, "FragTop1_mnuMain-menuItem017")))
+        dropdown_menu = self.multiFind(
+            driver=driver,
+            element_id= "FragTop1_mnuMain-menuItem017",
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[36]/tbody/tr/td[6]'
+        )
         dropdown_menu.click()
 
         # Hopefully clicking on incoming message monitor options
         # Wait for the second level dropdown to be present and then click on it
-        second_menu = "FragTop1_mnuMain-menuItem017-subMenu-menuItem009"
-        second_level_dropdown = wait.until(EC.presence_of_element_located((By.ID, second_menu)))
+        #second_menu = "FragTop1_mnuMain-menuItem017-subMenu-menuItem009"
+        second_level_dropdown = self.multiFind(
+            driver, 
+            element_id= "FragTop1_mnuMain-menuItem017-subMenu-menuItem009",
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[16]/tbody/tr[9]/td'
+        )
         second_level_dropdown.click()
 
         # Wait for the desired option to be present and then click on it
         imm = 'FragTop1_mnuMain-menuItem017-subMenu-menuItem009-subMenu-menuItem003'
-        desired_option = wait.until(EC.presence_of_element_located((By.ID, imm)))
+        desired_option = self.multiFind(
+            driver=driver,
+            element_id=imm,
+            xpath='/html/body/form/table[2]/tbody/tr/td[2]/table[5]/tbody/tr[3]/td'
+        )
         desired_option.click()
+        return
     
     def imm_search(self): 
         '''
@@ -64,8 +109,11 @@ class IMM(SetUp):
         
         # Choosing lab of interest
         imm_lab_menu = 'ddlLaboratory'
-        wait = WebDriverWait(driver, 8)
-        lab_dropdown = wait.until(EC.presence_of_element_located((By.ID, imm_lab_menu)))
+        lab_dropdown = self.multiFind(
+            driver=driver,
+            element_id=imm_lab_menu,
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[2]/td[2]/div[1]/select'
+        )
         lab_dropdown.click()
         
         # Create a Select object and select Lab of Interest 
@@ -74,7 +122,11 @@ class IMM(SetUp):
         
         # Find search button and click 
         search_id = 'ibtnSearch'
-        search =  driver.find_element(By.ID, search_id )
+        search =  self.multiFind(
+            driver=driver,
+            element_id=search_id,
+            xpath='/html/body/form/div[3]/div/div/table[3]/tbody/tr[2]/td/table/tbody/tr[4]/td/div/input[1]'
+        )
         search.click()
 
         return driver
@@ -82,7 +134,8 @@ class IMM(SetUp):
     def imm_export(self): 
         '''
         Method is used after completing the search for specific lab and exporting
-        all the results as an excel workbook and looking up those results in TST system
+        all the results as an excel workbook and looking up those results in TST system.
+        **Takes you back to the home page after excel workbook is downloaded
         '''
         driver = self.imm_search()
         
@@ -109,6 +162,9 @@ class IMM(SetUp):
         export_btn = wait.until(EC.presence_of_element_located((By.ID, export_id)))
         export_btn.click()
 
+        # switching back to parent frame / default content: 
+        driver.switch_to.default_content()
+
         # Making relative path to Downloads folder
         download_folder = self.download_folder()
         initial_files = set(os.listdir(download_folder))
@@ -118,8 +174,8 @@ class IMM(SetUp):
             current_files = set(os.listdir(download_folder))
             if len(current_files) <= len(initial_files): 
                 try:
-                    # going to wait 4 seconds if nothing shows up 
-                    # will wait 4 more seconds
+                    # going to wait 6 seconds if nothing shows up 
+                    # will wait 6 more seconds
                     time.sleep(6)
                 except: 
                     pass 
@@ -128,7 +184,7 @@ class IMM(SetUp):
             else: 
                 break 
         # driver.quit()
-        
+        self.go_home(driver)
         return driver
 
     def download_folder(self):
@@ -141,7 +197,6 @@ class IMM(SetUp):
 
     def export_df(self): 
         
-
         download_folder = self.download_folder()
         
         # Reading in the most recently downloaded excel file from downloads folder
@@ -170,7 +225,11 @@ class IMM(SetUp):
                                                         ].apply(self.classify_column)
         
         # Final filter of df based on classification column and ResultedTest
-        # filtered_import.to_excel('test.xlsx')
+        # Although we kept all of the unique combinations of DILR_ResultValue and ResultedTest after classification
+        # We might have multiple numeric values and we would not want to look at every single one so instead we
+        # only look at one example of this classification for each ResultedTest and that is also why we split the 
+        # data into two dataframes and recombine them (because we only want one example of ERROR and Numeric)
+        
         num_error = filtered_import[filtered_import['Classification'].isin(['ERROR', 'Numeric'])]
         num_error.drop_duplicates(subset=['DILR_ResultedTest','Classification'],
                                                         keep='last',
@@ -179,7 +238,7 @@ class IMM(SetUp):
         
         # Combine dataframe 
         final_df = pd.concat([categorical_df, num_error], ignore_index=True)
-        final_df.to_excel('test.xlsx')
+        final_df.to_excel('ELR_Validation_Search_Summary.xlsx')
 
         return final_df
 
@@ -206,3 +265,31 @@ class IMM(SetUp):
                 else:
                     # Return 'Categorical' for other cases
                     return 'Categorical'
+    def multiFind(self, driver, element_id, xpath=None, field_name=None):
+         
+        '''
+        Function is meant to locate regions on html web page, 
+        using the elements ID as a identifier. If element is not found 
+        by ID, function will attempt to find it by XPath.
+        '''
+        
+        wait = WebDriverWait(driver, 1)
+        try: 
+            element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))
+        except TimeoutException:
+            #time.sleep(3)
+            if xpath:
+                try: 
+                    element_btn = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                except: 
+                    pass
+            if field_name:
+                try: 
+                    element_btn = wait.until(EC.presence_of_element_located((By.XPATH, field_name)))
+                except: 
+                    pass  
+            else: print(f'Cannot locate desired field or tab')
+        except ElementClickInterceptedException: 
+            self.alert_handling(driver)
+
+        return element_btn  

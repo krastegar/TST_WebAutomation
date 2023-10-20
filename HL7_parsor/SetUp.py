@@ -1,4 +1,5 @@
-import time 
+import time
+import os 
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -14,21 +15,13 @@ class SetUp:
         paswrd, 
         FromDate, 
         ToDate,
-        url='https://test-sdcounty.atlasph.com/TSTWebCMR/pages/login/login.aspx'
+        url = 'https://test-sdcounty.atlasph.com/TSTWebCMR/pages/login/login.aspx'
         ):
         self.url = url 
         self.username = username
         self.paswrd = paswrd
         self.fromDate = FromDate
         self.toDate = ToDate
-    
-    def install(self): 
-        '''
-        If webdriver is not installed already this function will install it 
-        via python commands 
-        '''
-        service = ChromeService(executable_path=ChromeDriverManager().install())
-        return
 
 
     def login(self): 
@@ -39,15 +32,20 @@ class SetUp:
         TRNWebCMR
         WebCMR (Production)
         '''
-        driver = webdriver.Chrome()
-        website = driver.get(self.url)
+        # create chrome webdriver object with the above options
+        service = ChromeService(executable_path="chromedriver.exe")
+        driver = webdriver.Chrome(service=service)
+
+        # go to TST website
+        driver.get(self.url)
+
         # Find the username and password elements and enter login credentials
-        time.sleep(1)
+        # time.sleep(1)
         username = driver.find_element(By.ID, value="txtUsername")
         username.send_keys(self.username)
         password = driver.find_element(By.ID, value="txtPassword")
         password.send_keys(self.paswrd)
-        time.sleep(.5)
+        # time.sleep(.5)
         password.send_keys(Keys.RETURN)
         
         return driver
