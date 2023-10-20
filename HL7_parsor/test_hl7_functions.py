@@ -1,7 +1,3 @@
-import time
-import pandas as pd 
-from DI_Incident import DI_Search
-from IMM import IMM
 from HL7 import HL7_extraction
 
 def test_single_accession(): 
@@ -38,8 +34,6 @@ def test_single_accession():
     imm.nav2IMM(driver=driver)
     imm.acc_test_search(driver, acc_num, resultTest)
     parse_hl7=imm.data_wrangling(driver, resultTest, acc_num)
-
-
 
     return 
 

@@ -136,3 +136,6 @@ Log_info.log
 
 # Web App output folder
 output/
+
+# Excel files 
+*.xlsx
