@@ -115,11 +115,7 @@ class HL7_extraction(DI_Search, IMM):
                     report = self.hl7_report(resultTest, acc_num, di_num,webCMR_hl7_df)
             except StaleElementReferenceException as e:
                 continue
-        #home_directory = os.path.expanduser( '~' )
-        lab_name = re.sub(r'[^\w\s]+', '_',self.lab)
-        new_dir = f'./{lab_name}/'
-        query_df = df.to_excel(f'{new_dir}/query_summary.xlsx')
-    
+
 
     def acc_test_search(self, driver, acc_num, resultTest):
         #acc_box = wait.until(EC.presence_of_element_located((By.ID, 'txtAccession')))

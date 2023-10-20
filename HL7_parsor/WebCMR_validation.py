@@ -64,7 +64,6 @@ def main():
         input('Check log info...press enter after complete.')
     except SessionNotCreatedException as noSession: 
         logging.exception("An error occurred, check Log_info.log: %s", noSession)
-
     logging.info('Process Complete...')
 
     return
