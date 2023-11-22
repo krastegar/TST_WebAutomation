@@ -4,7 +4,8 @@ import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.keys import Keys
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
 
@@ -40,12 +41,13 @@ class SetUp:
         driver.get(self.url)
 
         # Find the username and password elements and enter login credentials
-        # time.sleep(1)
-        username = driver.find_element(By.ID, value="txtUsername")
+        # time.sleep(30)
+        wait = WebDriverWait(driver, 30)
+        username = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="txtUsername"]')))
         username.send_keys(self.username)
-        password = driver.find_element(By.ID, value="txtPassword")
+
+        password = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="txtPassword"]')))
         password.send_keys(self.paswrd)
-        # time.sleep(.5)
         password.send_keys(Keys.RETURN)
         
         return driver

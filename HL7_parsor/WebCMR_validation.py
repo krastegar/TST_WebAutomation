@@ -6,7 +6,8 @@ from selenium.common.exceptions import (
     NoSuchElementException, 
     StaleElementReferenceException,
     TimeoutException,
-    SessionNotCreatedException
+    SessionNotCreatedException,
+    WebDriverException
     )
 from IMM import IMM
 
@@ -63,7 +64,9 @@ def main():
         logging.exception("An error occurred, check Log_info.log: %s", te)
         input('Check log info...press enter after complete.')
     except SessionNotCreatedException as noSession: 
-        logging.exception("An error occurred, check Log_info.log: %s", noSession)
+        logging.exception("Incompatibility with Chromedriver and Chromebrowser: %s", noSession)
+    except WebDriverException as sessionIncompatible:
+        logging.exception("Incompatibility with Chromedriver and Chromebrowser: %s", sessionIncompatible)
     logging.info('Process Complete...')
 
     return
