@@ -1,3 +1,21 @@
+"""
+    Purpose:
+    The `IMM` class represents a module for performing operations related to IMM 
+    (Incoming Message Monitor) in a web application. It inherits from the `SetUp` class 
+    and provides methods for navigating to the IMM page, searching for specific lab data, 
+    navigating to the export menu and exporting the results as an Excel workbook. The class 
+    also contains methods for navigating the application's dropdown menus and clicking on various 
+    web elements on the web page.
+
+    Algorithm:
+    1. Initialize a new instance of the class by providing the lab name.
+    2. Call the `imm_menu` method to navigate to the IMM page.
+    3. Input date ranges using the `date_range` method.
+    4. Choose the desired laboratory from the dropdown menu.
+    5. Click the search button to perform the search.
+    6. If needed, use the `imm_export` method to export the search results as an Excel workbook.
+"""
+
 import os
 import time
 import glob
@@ -14,23 +32,31 @@ from selenium.common.exceptions import TimeoutException, ElementClickIntercepted
 
 
 class IMM(SetUp): 
-    
-    '''
-    For now I am going to do double inheritance, because I am making the assumption
-    that the date range for staging area will be the same as the date range for 
-    incoming message monitor 
-    '''
+
     
     def __init__(self, LabName : str, *args, **kwargs): 
+        """
+        Initializes a new instance of the class.
+
+        Parameters:
+            LabName (str): The name of the lab.
+
+        Returns:
+            None
+        """
         super().__init__(*args, **kwargs)
         self.lab = LabName
         
 
     def imm_menu(self): 
-        '''
-        This method is used for logging into TSTWebCMR and going to 
-        Incoming Message Monitor page 
-        '''
+        """
+        Generates the function comment for the given function body in a markdown code block
+        with the correct language syntax.
+        
+        Returns:
+            The function comment in markdown format.
+        """
+
         # login and go to home page
         driver = self.login()
         # Navigating the dropdown menu to go into IMM
@@ -38,10 +64,12 @@ class IMM(SetUp):
         return driver 
     
     def go_home(self, driver):
-        '''
-        Method is meant to navigate back home, using home icon button
-        to get there
-        '''
+        """
+        Clicks the home button and then the investigators search button.
+        :param self: The current instance of the class.
+        :param driver: The driver object used to interact with the web page.
+        """ 
+
         # Clicking home button 
         home_btn = self.multiFind(
             driver = driver, 
@@ -60,9 +88,16 @@ class IMM(SetUp):
         return
     
     def nav2IMM(self, driver):
-        '''
-        Only works if you are at the home page and want to navigate to IMM menu
-        '''
+        """
+        Navigates to the IMM page in the application.
+        
+        Args:
+            driver (WebDriver): The WebDriver instance to use for navigation.
+        
+        Returns:
+            None
+        """
+
         # Navigating back to home page
         self.go_home(driver)
 
@@ -97,10 +132,18 @@ class IMM(SetUp):
         return
     
     def imm_search(self): 
-        '''
-        This method is for conducting the search of specific dates and a specific lab that 
-        we want to do validations for. (This is the reason for double inheritance)
-        '''
+        """
+        Performs an IMM search by following the steps below:
+        
+            1. Goes to the IMM page.
+            2. Inputs the date ranges.
+            3. Chooses the laboratory of interest.
+            4. Finds the search button and clicks it.
+        
+        Returns:
+            The driver object.
+        """
+
         # Going to IMM page
         driver = self.imm_menu()
 
@@ -135,7 +178,10 @@ class IMM(SetUp):
         '''
         Method is used after completing the search for specific lab and exporting
         all the results as an excel workbook and looking up those results in TST system.
-        **Takes you back to the home page after excel workbook is downloaded
+        Takes you back to the home page after excel workbook is downloaded
+        
+        Returns:
+            WebDriver: The WebDriver object representing the browser session.
         '''
         driver = self.imm_search()
         
@@ -188,14 +234,25 @@ class IMM(SetUp):
         return driver
 
     def download_folder(self):
-        '''
-        Method to get the relative path of a users Downloads folder
-        '''
+        """
+        Downloads the folder where the files are saved.
+
+        :param self: The object instance.
+        :return: The path of the downloaded folder.
+        """
+
         home_directory = os.path.expanduser("~")
         download_folder = os.path.join(home_directory, "Downloads")
         return download_folder
 
     def export_df(self): 
+        """
+        Export the DataFrame to an Excel file and return the filtered DataFrame.
+        
+        Returns:
+            pandas.DataFrame: The filtered DataFrame containing the unique resulted tests, incident ID,
+            accession number, and result value.
+        """ 
         
         download_folder = self.download_folder()
         
@@ -243,10 +300,16 @@ class IMM(SetUp):
         return final_df
 
     def classify_column(self,value):
-        '''
-        Method is meant to be used to classify ResultValue column of dataframe
-        and split up the weird results away from the normal ones 
-        '''
+        """
+        Classifies the value of a column as either 'Categorical', 'Numeric', or 'Mixed'.
+
+        Parameters:
+            value (str): The value to be classified.
+
+        Returns:
+            str: The classification of the value. Possible values are 'Categorical', 'Numeric', or 'Mixed'.
+        """
+        
         # Check if value contains only letters
         if value.isalpha():
             # If value contains only letters, return 'Categorical'
@@ -266,13 +329,19 @@ class IMM(SetUp):
                     # Return 'Categorical' for other cases
                     return 'Categorical'
     def multiFind(self, driver, element_id, xpath=None, field_name=None):
-         
-        '''
-        Function is meant to locate regions on html web page, 
-        using the elements ID as a identifier. If element is not found 
-        by ID, function will attempt to find it by XPath.
-        '''
+        """
+        Finds and returns a web element on the page using the given driver and element identifier.
         
+        Args:
+            driver: The driver used to interact with the web page.
+            element_id: The ID of the element to locate on the page.
+            xpath: Optional. The XPath of the element to locate on the page.
+            field_name: Optional. The name of the field to locate on the page.
+        
+        Returns:
+            The web element that was found using the given identifier.
+        """
+         
         wait = WebDriverWait(driver, 1)
         try: 
             element_btn = wait.until(EC.presence_of_element_located((By.ID, element_id)))

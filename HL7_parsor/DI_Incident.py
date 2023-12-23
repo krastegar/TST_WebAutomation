@@ -1,3 +1,26 @@
+"""
+
+    Purpose:
+    The `DI_Search` class represents a module for performing a disease search and scraping data 
+    from the TST website. It inherits from the `IMM` and `SetUp` classes. The class provides methods 
+    for navigating to the IMM menu, downloading an Excel sheet, extracting disease queries and 
+    HL7 accession numbers from the sheet, scraping data from the Demographic and Lab tabs on the TST 
+    website, and returning the collected data.
+
+    Algorithm:
+    1. Initialize a new instance of the `DI_Search` class.
+    2. Call the `imm_export` method to navigate to the IMM menu and download an Excel sheet.
+    3. Call the `export_df` method to extract disease queries and HL7 accession numbers from the 
+    Excel sheet.
+    4. Call the `go_home` method to click the home button and return to the main page.
+    5. Iterate over the disease incident numbers extracted from the Excel sheet.
+    6. Call the `webTST_scrape` method to scrape data from the Demographic and Lab tabs on the TST 
+    website.
+    7. Return the driver object, DataFrame containing disease queries and HL7 accession numbers, 
+    scraped values from the Demographic and Lab tabs, and their corresponding indices.
+
+"""
+
 import time
 import os
 import pandas as pd
@@ -22,6 +45,16 @@ class DI_Search(IMM, SetUp):
         super().__init__(*args, **kwargs)
     
     def disease_search(self): 
+        """
+        This function performs a disease search and scrapes data from the TST website.
+
+        :return: A tuple containing the following:
+                 - driver: The driver object.
+                 - df: The DataFrame containing disease queries and Hl7 accession numbers.
+                 - webCMR_values: The values scraped from the Demographic and Lab tabs off the TST website.
+                 - webCMR_indicies: The indices of the values scraped from the TST website.
+        """
+
         # Going into IMM Menu and Downloading excel sheet 
         driver = self.imm_export()
 
@@ -40,6 +73,22 @@ class DI_Search(IMM, SetUp):
         return driver, df, webCMR_values, webCMR_indicies
 
     def webTST_scrape(self, driver, di_num_list, i):
+        """
+        This function scrapes data from the Demographic and Lab tabs off the TST website.
+
+        Args:
+            driver (WebDriver): The WebDriver object to use for interacting with the page.
+            di_num_list (list): List of Disease Incident numbers.
+            i (int): The index of the Disease Incident list to select specific Disease Incident ids.
+
+        Returns:
+            tuple: containing the following
+                 - webCMR_values: The values scraped from the Demographic and Lab tabs off the TST website.
+                 - webCMR_indicies: The indices of the values scraped from the TST website.
+        Raises:
+            NoSuchElementException: If both the menu element and the select element are not found.
+
+        """
         di_num = int(di_num_list[i])
             
         # navigating to disease incidents tab
@@ -377,6 +426,17 @@ class DI_Search(IMM, SetUp):
         return (webCMR_values,webCMR_indicies)
 
     def address(self, driver, ids : list):
+        """
+        Retrieves the address information and puts them into a string for a given web driver 
+        and a list of web element IDs.
+        
+        Args:
+            driver (object): The driver object used to interact with the web page.
+            ids (list): A list of IDs containing the element ID and field name for each address component.
+        
+        Returns:
+            str: The concatenated address string in the format "street, city, state zip".
+        """
         prov_st = self.extract_info(
             driver= driver,
             element_id=ids[0][0],
@@ -401,9 +461,21 @@ class DI_Search(IMM, SetUp):
         return provider_address
 
     def dropDown_extract(self, driver,  select_id, menu_id=None):
-        '''
-        Alternative method for getting info from dropdown menu
-        '''
+        """
+        Extracts the text of the selected option from a dropdown menu.
+
+        Args:
+            driver (WebDriver): The WebDriver object to use for interacting with the page.
+            select_id (str): The ID of the select element.
+            menu_id (str, optional): The ID of the menu element if the select element is not found. Defaults to None.
+
+        Returns:
+            str: The text of the selected option.
+
+        Raises:
+            NoSuchElementException: If both the menu element and the select element are not found.
+
+        """
         try:
             dropdown_element = driver.find_element(By.ID, select_id)
             selected_option = Select(dropdown_element).first_selected_option
@@ -421,13 +493,23 @@ class DI_Search(IMM, SetUp):
         return text
     
     def extract_info(self, driver, element_id, xpath=None, field_name=None):
-        
-        '''
-        Function is meant to locate regions on html web page, 
-        using the elements ID as a identifier. If element is not found 
-        by ID, function will attempt to find it by XPath and return the 
-        text value of that element. 
-        '''
+        """
+        Extracts information from a web element using the specified driver and element ID.
+
+        Args:
+            driver (WebDriver): The WebDriver object used for browser automation.
+            element_id (str): The ID of the web element to extract information from.
+            xpath (Optional[str]): The XPath of the web element, if available.
+            field_name (Optional[str]): The name of the field, if available.
+
+        Returns:
+            str: The extracted information from the web element.
+
+        Raises:
+            TimeoutException: If the element with the specified ID or XPath is not found within the given timeout.
+            ElementClickInterceptedException: If an element intercepts the click action during execution.
+
+        """
         
         wait = WebDriverWait(driver, 1)
         try: 
