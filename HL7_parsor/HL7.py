@@ -1,9 +1,41 @@
+"""
+    The HL7_extraction class is responsible for extracting data from HL7 files and 
+    generating a summary report.
+
+    Purpose:
+    This class provides functionality to copy data from an HL7 file to a summary report. 
+    It exports a DataFrame, navigates to the IMM menu, and downloads an Excel sheet. It retrieves 
+    disease queries and HL7 accession numbers from the Excel sheet. Next, it searches for HL7 and 
+    disease incidents. For each iteration, it inputs the resulted test and accession numbers in the 
+    IMM search boxes. It copies and filters HL7 results, performs web scraping to get webCMR values, 
+    and then creates a summary DataFrame and generates a summary report. If there are any stale 
+    element reference exceptions, they are caught, and the function continues to the next iteration.
+
+    Algorithm:
+    1. The __init__ method initializes a new instance of the class.
+    2. The hl7_copy method copies data from an HL7 file to a summary report.
+        - It exports a DataFrame.
+        - It navigates to the IMM menu and downloads an Excel sheet.
+        - It retrieves disease queries and HL7 accession numbers from the Excel sheet.
+        - It searches for HL7 and disease incidents.
+        - For each iteration, it inputs the resulted test and accession numbers in the IMM search 
+        boxes.
+        - It copies and filters HL7 results.
+        - It performs web scraping to get webCMR values.
+        - It creates a summary DataFrame and generates a summary report.
+        - If there are any stale element reference exceptions, they are caught, and the function 
+        continues to the next iteration.
+"""
+
 import os
 import pandas as pd 
 import re
 import numpy as np
 import logging
 import time
+
+from typing import Tuple, List
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support.wait import WebDriverWait
@@ -15,13 +47,37 @@ from IMM import IMM
 class HL7_extraction(DI_Search, IMM):
 
     def __init__(self, *args, **kwargs):
+        """
+        Initializes a new instance of the class.
+
+        Parameters:
+            *args (tuple): The positional arguments.
+            **kwargs (dict): The keyword arguments.
+
+        Returns:
+            None
+        """
         super().__init__(*args, **kwargs)
         return
     
     def hl7_copy(self):
-        '''
-        In the final version I wll have disease_search in this method 
-        '''
+        """
+        Copies data from an HL7 file to a summary report.
+        
+        This function exports a DataFrame, navigates to the IMM menu, and downloads an Excel sheet. 
+        It then retrieves disease queries and HL7 accession numbers from the Excel sheet. Next, it searches 
+        for HL7 and disease incidents. For each iteration, it inputs the resulted test and accession numbers 
+        in the IMM search boxes. It copies and filters HL7 results, performs web scraping to get webCMR values,
+        and then creates a summary DataFrame, and generates a summary report. If there are any stale element 
+        reference exceptions, they are caught and the function continues to the next iteration.
+        
+        Parameters:
+        - self: The current instance of the class.
+        
+        Returns:
+        None
+        """
+
         logging.info('Exporting DataFrame')
         # Going into IMM Menu and Downloading excel sheet 
         driver = self.imm_export()
@@ -118,6 +174,17 @@ class HL7_extraction(DI_Search, IMM):
 
 
     def acc_test_search(self, driver, acc_num, resultTest):
+        """
+        This function performs a search on the web page using the provided driver object, accession number, and result test. 
+
+        Args:
+            driver (WebDriver): The WebDriver object used to interact with the web page.
+            acc_num (int): The accession number to be entered in the 'txtAccession' input field.
+            resultTest (str): The result test to be entered in the 'txtResultedTest' input field.
+
+        Returns:
+            tuple: A tuple containing the acc_box and test_search elements after the search is performed.
+        """
         #acc_box = wait.until(EC.presence_of_element_located((By.ID, 'txtAccession')))
         acc_box = self.multiFind(
             driver=driver,
@@ -145,6 +212,18 @@ class HL7_extraction(DI_Search, IMM):
         return acc_box,test_search
 
     def data_wrangling(self, driver, resultTest, acc_num): 
+        """
+        Extracts specific values from an HL7 message and returns them along with the corresponding section labels.
+
+        Parameters:
+        - driver: The Selenium WebDriver object used to interact with the web page.
+        - resultTest: The name of the test result to search for in the HL7 message.
+        - acc_num: The accession number associated with the HL7 message.
+
+        Returns:
+        - hl7_values: A list of specific values extracted from the HL7 message.
+        - hl7_section_label: A list of section labels corresponding to the extracted values.
+        """
         
         df, obx_indx, obr_indx, spm_indx = self.hl7_redoSearch(driver, resultTest, acc_num)
         logging.info(f'# of OBX: {len(obx_indx)} \n # of OBR segments: {len(obr_indx)} \n # of SPM segments:  {len(spm_indx)}')
@@ -303,11 +382,22 @@ class HL7_extraction(DI_Search, IMM):
 
         return hl7_values, hl7_section_label
 
-    def hl7_redoSearch(self, driver, resultTest, acc_num):
-        '''
-        Function is meant to redo a search for hl7 message if there are no results 
-        searching for the resultedTest and accession number in Incoming Message monitor page. 
-        '''
+    def hl7_redoSearch(self, driver: WebDriver, resultTest: str, acc_num: str) -> Tuple[pd.DataFrame, List[int], List[int], List[int]]:
+        """
+        Perform a redo search in the HL7 module.
+        
+        Args:
+            driver: The WebDriver object used to control the web browser.
+            resultTest: The result test to search for.
+            acc_num: The accession number to search for.
+        
+        Returns:
+            A tuple containing the following:
+                - DataFrame: A DataFrame object containing the HL7 sections.
+                - list: A list of indices for the OBX sections.
+                - list: A list of indices for the OBR sections.
+                - list: A list of indices for the SPM sections.
+        """
         self.nav2IMM(driver=driver)
         time.sleep(1)
         self.acc_test_search(resultTest=resultTest,
@@ -353,6 +443,18 @@ class HL7_extraction(DI_Search, IMM):
         return sp_collect
 
     def hl7_report(self, resultTest, acc_num, di_num,df):
+        """
+        Generates a HL7 report and saves it as an Excel file.
+
+        Parameters:
+            resultTest (str): The result of the test.
+            acc_num (str): The accession number.
+            di_num (str): The DI number.
+            df (pandas.DataFrame): The DataFrame to be saved as an Excel file.
+
+        Returns:
+            None
+        """
         home_directory = os.path.expanduser( '~' )
         lab_name = re.sub(r'[^\w\s]+', '_',self.lab)
         new_dir = f'./{lab_name}/'
@@ -365,6 +467,18 @@ class HL7_extraction(DI_Search, IMM):
         df.to_excel(f'{file_dir}_ACCnum_{acc_num}_DInum_{int(di_num)}.xlsx')
 
     def match_obx(self, resultTest : str, df : pd.DataFrame, obx_indx : int, column : int):
+        """
+        Finds the index of the first row in the given DataFrame that contains a specified string in the specified column.
+        
+        Parameters:
+            resultTest (str): The string to search for.
+            df (pd.DataFrame): The DataFrame to search in.
+            obx_indx (int): The index of the column to search in.
+            column (int): The index of the column to search in.
+        
+        Returns:
+            int: The index of the first row that matches the search string, or 0 if no match is found.
+        """
         key = 0
         for row_index in obx_indx: 
             obx_result : str = str(df.iloc[row_index, column])

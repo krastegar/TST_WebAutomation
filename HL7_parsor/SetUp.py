@@ -1,3 +1,14 @@
+"""
+The SetUp class is responsible for setting up the necessary parameters and performing 
+actions related to establishing webdriver sessions, logging in, and manipulating date ranges 
+on a website.
+
+Algorithm:
+1. The __init__ method initializes the SetUp object with the provided username, password, start date, end date, and an optional URL parameter.
+2. The login method logs into a website using the provided username and password, and returns a WebDriver object.
+3. The date_range method inputs the date range in the provided WebDriver object.
+"""
+
 import time
 import os 
 
@@ -26,13 +37,13 @@ class SetUp:
 
 
     def login(self): 
+        """
+            Login to the website using the provided username and password.
+            
+            :return: The webdriver object after successful login.
+            :rtype: WebDriver
+        """
 
-        '''
-        Function is meant to go to specified url for webcmr, i.e)
-        TSTWebCMR
-        TRNWebCMR
-        WebCMR (Production)
-        '''
         # create chrome webdriver object with the above options
         service = ChromeService(executable_path="chromedriver.exe")
         driver = webdriver.Chrome(service=service)
@@ -53,10 +64,17 @@ class SetUp:
         return driver
 
     def date_range(self,driver): 
-        # inputting date range 
-        from_dt, to_dt =  'txtFromDate', 'txtToDate'
-        fromDate = driver.find_element(By.ID, from_dt)
+        """
+        Input the date range in the provided driver object.
+        
+        :param driver: The driver object used to interact with the web page.
+        :type driver: WebDriver
+        
+        :return: None
+        """
+        
+        fromDate = driver.find_element(By.ID, 'txtFromDate')
         fromDate.send_keys(self.fromDate)
-        toDate = driver.find_element(By.ID, to_dt)
+        toDate = driver.find_element(By.ID, 'txtToDate')
         toDate.send_keys(self.toDate)
         return
