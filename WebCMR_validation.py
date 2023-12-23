@@ -58,9 +58,11 @@ def main():
     except StaleElementReferenceException as se:
         logging.exception("An error occurred, check Log_info.log: %s", se)
         input('Check log info...press enter after complete')
-
     except TimeoutException as te:
         logging.exception("An error occurred, check Log_info.log: %s", te)
+        input('Check log info...press enter after complete.')
+    except UnboundLocalError as element_not_found:
+        logging.exception("Cannot find web element on webpage check Log_info.log: %s", element_not_found)
         input('Check log info...press enter after complete.')
     
     logging.info('Process Complete...')
