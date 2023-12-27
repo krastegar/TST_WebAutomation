@@ -1,17 +1,24 @@
 import sys 
 
-from Completeness import Completeness
+from missing_reports import BulkVal
+from menu import Menu
 
 def main():
 
-    # calling Completeness object 
-    report_maker = Completeness(
-        file_name= 'TST_04212023_EISBDisease',
-        lab_name='Point Loma Nazarene University Wellness Center',
-        folder_path= 'S:\PHS\EPI\EPIRESTRICTED\BEACON\EPI_BEACON_ELR\Point Loma Nazarene University Wellness',
-        test_center_1='Point Loma',
-        test_center_2='Wellness Medical Center')
-    report_maker.completeness_report()
+    # calling my menu object
+    menu = Menu()
+
+    # getting user input
+    folder_path = menu.get_input("Enter folder_path: ", str, lambda x: menu.is_valid_folder_path(x))
+    lab_name = menu.get_input('Name of Lab: ', str)
+
+    # calling bulkvalidation object 
+    report_maker = BulkVal(folder_path=folder_path, lab_name=lab_name)
+    # C:\Users\krastega\OneDrive - County of San Diego\Desktop\MicrosoftAcessDB
+
+    # building report of all summary dataframes
+    report_maker.report_builder()
+
     return
 
 if __name__=="__main__":

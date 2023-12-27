@@ -38,8 +38,9 @@ import os
 import re
 
 class BulkVal:
-    def __init__(self, folder_path):
+    def __init__(self, folder_path, lab_name):
         self.folder_path = folder_path
+        self.labname = lab_name
 
 
     def combined_MM(self, start_with):
@@ -80,15 +81,15 @@ class BulkVal:
 
         # Merging combined exports
         merged_df = pd.merge(
-         pd.DataFrame(combined_tst[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
-         pd.DataFrame(combined_prod[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
-         on=['DILR_AccessionNumber'], 
-         how='right'
-         )
+            pd.DataFrame(combined_tst[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
+            pd.DataFrame(combined_prod[['DILR_AccessionNumber', 'DILR_ResultTest']]), 
+            on=['DILR_AccessionNumber'], 
+            how='right'
+        )
 
         return merged_df
     
-    def frequency_table(self, merged_df):
+    def frequency_table(self, column1 = 'DILR_ResultTest_x', column2 = 'DILR_ResultTest_y'):
         '''
         A function that loops through a Merged dataframe. This merged dataframe is merged on the 
         accession number column, which results in having two ResultedTest columns. The function loops 
@@ -132,3 +133,260 @@ class BulkVal:
                 missing_test.append(index)
                 
         return new_df, missing_test
+    
+    def test_match(self, column1 = 'DILR_ResultTest_x', column2 = 'DILR_ResultTest_y'):
+
+        '''
+        new_df structure:
+
+                                                    SarsCov2        HepC SurfAnti A
+        SarsCoronaVirusLike::PROBE:ANT                  15               0
+
+        HepatitusC Surface Antingen::MOLC:ANTH          0                42
+
+        Code below is looping through each row and finding the column with the highest counts, if there
+        are 2 columns that have the same amount of counts it looks at both columns to see if there are 
+        any other rows within that column that have higher counts. If there are then it removes the column
+        name from the list of tie breaker columns. 
+
+        Finally for the test types in production that are not seen in TST are put together in one list
+        and reported as missing. 
+        '''
+        new_df, missing_test = self.frequency_table(column1, column2) # new_df.to_excel('Intermediate_match.xlsx')
+        # new_df.to_excel('Intermediate_match.xlsx') only used for diagnostics 
+        matched_pairs = {}
+        match_array = []
+        for index, row in new_df.iterrows():
+            max_val = row.max()
+            col_names = row[row == max_val].index.tolist()
+            if len(col_names) > 1: 
+                for col in col_names: 
+                    tie_break_score = new_df[col].max()
+                    if tie_break_score > max_val:  # this was originally if tie_break_score > max_val:
+                        col_names.remove(new_df[col].name)
+            matched_pairs[col_names[0]] = index
+            match_array.append((index, col_names[0]))
+        match_df = pd.DataFrame(match_array, columns=['ProdTest', 'TSTTest'])
+        #match_df.to_excel('match.xlsx')
+        
+        # filter data tables for repeat entries in TSTTest column 
+        corrected_matches_df, prod_test_mapping , mismatch_test= self.remove_duplicates(match_df)
+        
+        # List of missing tests (seen in Prod env but not TST) 
+        # I added the cases of mismatched preliminary vs final vs correction to the missing test list
+        # using list comprehension to combine both missing tests and mismatch test 
+        _ = [missing_test.append(test) for test in mismatch_test]
+
+        # I added an indicator showing why that there are some test are marked as 'missing' even though
+        # a few of the accession numbers were seen in both PROD and TST message monitors 
+        # I also added an indicator to signal that mismatched preliminary vs final vs correction are in 
+        # Missing test lists for production 
+        for index, row in corrected_matches_df.iterrows():
+            prod_testName = row['ProdTest']
+            tst_testName = row['TSTTest']
+            if tst_testName == 'N/A' and prod_testName not in missing_test: 
+                corrected_matches_df.loc[
+                    index, 'TST_exceptions'
+                    ] = 'Few accession # found, but no good name match'
+            elif prod_testName in mismatch_test:
+                corrected_matches_df.loc[
+                    index, 'TST_exceptions'
+                    ] = '''
+                    Mismatched preliminary vs final vs correction to the missing test list.
+                    These tests are put into production missing test list 
+                    '''
+            else: pass 
+        corrected_matches_df.drop('TSTTest', axis=1, inplace = True)
+        #corrected_matches_df.to_excel('OneToOne_Match.xlsx')
+
+        return prod_test_mapping, missing_test, corrected_matches_df
+    
+    def remove_duplicates(self, df):
+        '''
+        After doing the initial match based on frequency, we are going to look at the 
+        tests that have duplicate matches to PROD environment and filter out the best 
+        matches 
+        '''
+        final_pattern = r'^(?=.*?- Final\b).+'
+        correction_results = r'^(?=.*?- Correction to results\b).+'
+        preliminary = r'^(?=.*?- Preliminary\b).+'
+        
+        mismatch_test = []
+        # checking to see if there are any 'prelimanary' or 'Correction to results'
+        for index, row in df.iterrows(): 
+            tst, prod = str(row['TSTTest']), str(row['ProdTest'])
+            if re.match(final_pattern, prod) and re.match(final_pattern,tst): 
+                df.loc[index, 'TST'] = tst
+                #print('MATCHHH')
+            elif re.match(correction_results, prod) and re.match(correction_results,tst):
+                df.loc[index, 'TST'] = tst
+            elif re.match(preliminary, prod) and re.match(preliminary,tst):
+                df.loc[index, 'TST'] = tst
+            elif all([not re.match(preliminary, prod), re.match(preliminary, tst)]):
+                mismatch_test.append(prod) #continue
+            elif all([not re.match(correction_results, prod), re.match(correction_results,tst)]):
+                mismatch_test.append(prod) #continue
+            elif all([not re.match(final_pattern, prod), re.match(final_pattern,tst)]):
+                mismatch_test.append(prod) #continue
+                # this condition says if one suffix is different than the other  than
+            else: 
+                #mismatch_test.append(prod)
+                df.loc[index, 'TST'] = np.nan
+
+        # finally make a key:value dictionary with Production ResultTest and TST ResultTest
+        prod_tst_mapping = {row['TST']: row['ProdTest'] for index, row in df.iterrows()}
+
+        return df, prod_tst_mapping, mismatch_test
+    
+    
+    def missing_test_report(self, prodTestsMissingInTST):
+        '''
+        Function is made to make a missing test report from both tests seen in TST
+        and not in PROD and visa versa. 
+        Parameter (tst_df): This is the TST combinded dataframe that already has the DILR_ResultTest
+                            column already transformed after matching algorithm
+        Parameter (prod_df): This is just the combined dataframe from all of the prod message monitors
+        Parameter (prodTestMissingInTST): This is a list that is produced by test_match() that has
+                                        test types that are seen in PROD but not seen in TST. Produced 
+                                        after matching algorithm.
+        '''
+        # gettting combined tst and prod dataframes
+        tst_df, prod_df = self.prod_tst_combinedDF()
+
+        # Unique Test Results seen in both TST and PROD 
+        tst_unique = list(np.unique(tst_df['DILR_ResultTest']))
+        prod_unique = list(np.unique(prod_df['DILR_ResultTest']))
+
+        tst_notProd = []
+        for test in tst_unique:
+            if test not in prod_unique:
+                tst_notProd.append(test)
+                
+        # building dataframe for both missing test lists 
+        df_1 = pd.DataFrame({'PROD not in TST': prodTestsMissingInTST})
+        df_2 = pd.DataFrame({'TST not in PROD': tst_notProd})
+        missing_report_df = pd.concat([df_1, df_2], axis=1)
+        #missing_report_df.to_excel('missing_test_types.xlsx')
+
+        return missing_report_df
+    
+
+    def final_missing(self):
+        '''
+        Method which generates a list of test missing in TST but seen in PROD (prodTestsMissingInTST), 
+        as well as a summary dataframe of how the test names were matched in each environment (one2one_df).
+        It transforms the tests that were matched from PROD to TST into the names that they should have in
+        PROD and then keeps any of the test with accession numbers, only, that are not seen in the new matched
+        dataframe.
+        '''
+        similarity_key, prodTestsMissingInTST, one2one_df = self.test_match( 
+            column1='DILR_ResultTest_x', 
+            column2='DILR_ResultTest_y'
+        )
+        tst_df, prod_df = self.prod_tst_combinedDF()
+        # Transforming loinc code in tst to match prod environment 
+        tst_df['DILR_ResultTest'].replace(similarity_key, inplace=True)
+
+        # performing match on accession number and ResultedTest
+        # These are the matches from tst_df to prod_df after changing the tst_df ResultTest 
+        new_findings = pd.merge(
+            tst_df, 
+            prod_df, 
+            on= ['DILR_AccessionNumber', 'DILR_ResultTest'],
+            how='left', # change this back to left to match previous results
+            indicator=True)
+        new_findings.reset_index(inplace=True)
+        
+        # going to filter out non matches of accession number on new findings 
+        final_missing_report = prod_df[~prod_df['DILR_AccessionNumber'].isin(new_findings['DILR_AccessionNumber'])]
+        
+        return final_missing_report, prodTestsMissingInTST, one2one_df
+
+    def prod_tst_combinedDF(self):
+        tst_df = self.combined_MM(start_with='TST')
+        prod_df = self.combined_MM(start_with='PROD')
+        return tst_df,prod_df
+    
+    def sanity_check(self, final_missing_report):
+        '''
+        Function looks at the final missingn reports list and checks if any of the accession numbers in 
+        that list that are seen in combined TST message monitor (MM) exports. If there are it produces an 
+        excel that is full of these lists and sees what the tests are labeled as in Combined Production MM
+        
+        Note:
+            What was found in the tst leaks variable were a bunch of mislabeled tests in TST MM that 
+            remove_duplicates() took out from the final_missing report, but since these accession numbers
+            map back to TST and are technically 'Reported' I counted them as missing since they are mislabeled.
+            A summary of these mislabeling is shown in OneToOne_Match.xlsx file that is produced when running
+            the script
+        '''
+
+        # getting combined TST and PROD dataframes
+        tst_df, prod_df = self.prod_tst_combinedDF()
+
+        # Variable to find "leaks" in my match and find algorithm 
+        # i.e) tests with accession numbers in TST that I said were missing
+        tst_leaks =tst_df[tst_df['DILR_AccessionNumber'].isin(final_missing_report['DILR_AccessionNumber'])]
+
+        # removing the exceptions from the final missing report 
+        final_missing_report = final_missing_report[
+            ~final_missing_report['DILR_AccessionNumber'].isin(tst_leaks['DILR_AccessionNumber'])
+        ]
+
+        # Noticing that my code has some duplicates that are not accurate..
+        # Going to see if dropping duplicates helps 
+
+        # Seeing what these missing tests are in PROD environment
+        prod_replacements = prod_df[prod_df['DILR_AccessionNumber'].isin(tst_leaks['DILR_AccessionNumber'])]
+        #prod_replacements.to_excel("Prod_doubleCheck.xlsx")
+
+        # dropping duplicates from final results.
+        final_missing_report.drop_duplicates(['DILR_AccessionNumber', 'DILR_ResultTest'], inplace=True, keep='first')
+        #final_missing_report.to_excel('final_missing_report.xlsx')
+
+        return final_missing_report
+    
+    def report_builder(self):
+        '''
+        Method which puts all of the summary dataframes into one excel sheet
+        '''
+        # getting list of initial missing reports, tests seen in PROD but not TST
+        # and a summary of tests that were matched in TST but not prod 
+        missing_report, prod_missing_test ,match_summary = self.final_missing()
+
+        # getting missing test types report
+        missing_test_types = self.missing_test_report(prod_missing_test)
+
+        # removing exceptions from missing report lists 
+        final_missing_report = self.sanity_check(missing_report)
+
+        # building excel sheet with all reports
+        report_name = re.sub(r'[^\w\s]+', '_',self.labname)
+        writer = pd.ExcelWriter(f'{report_name}_validation_reports.xlsx', engine='xlsxwriter')
+
+        # list of missing test types
+        missing_test_types.to_excel(
+            writer, 
+            sheet_name='Missing_TestTypes', 
+            startcol=0, 
+            index=False
+            )
+        
+        # Matching summary
+        match_summary.to_excel(
+            writer, 
+            sheet_name='One2One_matches', 
+            startcol=0, 
+            index=False
+            )
+        
+        # final missing reports list
+        final_missing_report.to_excel(
+            writer, 
+            sheet_name='Tests in Prod not TST', 
+            startcol=0, 
+            index=False
+            )
+        writer.close()
+
+        return 

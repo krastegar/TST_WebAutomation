@@ -43,7 +43,7 @@ def main():
     
     # only need 1 connection for TST .accdb file 
     conn, _ = database_connection(folder_path=folder_path,
-                                       file_name='TST_DIE_04112023_04192023')
+                                       file_name='TST_DIE_04202023_05042023')
 
     # Going to make one excel sheet with completeness reports from both demographic 
     # and lab information
@@ -82,7 +82,7 @@ def main():
          merged_df, 
          'DILR_ResultTest_x', 
          'DILR_ResultTest_y'
-         ) 
+         )
 
     # Transforming loinc code in tst to match prod environment 
     tst_df['DILR_ResultTest'].replace(similarity_key, inplace=True)
@@ -106,7 +106,7 @@ def main():
     
     # See how this compares with combined tst dataframes  
     result_check = sanity_check(prod_df, tst_df, final_missing_report)
-    _ = None
+
 
     # Cross Comparison with Marjorie missing list 
 
