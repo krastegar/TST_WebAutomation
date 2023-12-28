@@ -20,11 +20,19 @@ class bulkval:
         self.lab_name = lab_name
 
     def combined_MM(self, startswith):
-        '''
-        Function that looks into a directory and looks for excel files that start with 'startwith' 
-        variable. Grabs all of the file names and reads them into pandas df, which is later 
-        concatenated 
-        '''
+        """
+        Generate a combined dataframe from multiple Excel files.
+
+        Parameters:
+            startswith (str): The prefix of the file names to include in the combined dataframe.
+
+        Returns:
+            combined_df (pandas.DataFrame): The combined dataframe containing data from all the Excel files.
+
+        Raises:
+            AssertionError: If there are no files that start with the specified prefix.
+        """
+
         # getting list of files for either TST or Prod IMM exports
         prod_file_list = [os.path.join(self.folder_path, file) for file in os.listdir(self.folder_path)
                         if os.path.basename(file).startswith(startswith) and os.path.basename(file).endswith('.xlsx')]
@@ -50,10 +58,10 @@ class bulkval:
         '''
         new_df structure:
 
-                                                    SarsCov2        HepC SurfAnti A
-        SarsCoronaVirusLike::PROBE:ANT                  15               0
+                                                            SarsCov2        HepC SurfAnti A
+                SarsCoronaVirusLike::PROBE:ANT                  15               0
 
-        HepatitusC Surface Antingen::MOLC:ANTH          0                42
+                HepatitusC Surface Antingen::MOLC:ANTH          0                42
 
         Code below is looping through each row and finding the column with the highest counts, if there
         are 2 columns that have the same amount of counts it looks at both columns to see if there are 
@@ -62,6 +70,36 @@ class bulkval:
 
         Finally for the test types in production that are not seen in TST are put together in one list
         and reported as missing. 
+
+        Parameters:
+            df (DataFrame): The input DataFrame.
+            column1 (str): The name of the first column.
+            column2 (str): The name of the second column.
+
+        Returns:
+            prod_test_mapping (dict): A dictionary of matched pairs.
+            missing_test (list): A list of missing tests.
+            corrected_matches_df (DataFrame): A DataFrame of corrected matches.
+
+        Step-by-step explanation:
+        1. Generate a frequency table for the given DataFrame `df` using the columns `column1` and `column2`.
+        2. Store the frequency table in the variable `new_df`.
+        3. Initialize an empty dictionary `matched_pairs` to store the matched pairs.
+        4. Initialize an empty list `match_array` to store the matched pairs.
+        5. Iterate over each row in the frequency table `new_df`.
+            - Find the maximum value in the row and the corresponding column names with that maximum value.
+            - If there are multiple column names with the maximum value, perform tie-breaker logic.
+            - Add the matched pair to the `matched_pairs` dictionary and the `match_array` list.
+        6. Convert the `match_array` list to a DataFrame named `match_df`.
+        7. Call the `remove_duplicates` function to filter the data tables for repeat entries in the TSTTest column.
+        8. Append the values from `mismatch_test` to the `missing_test` list.
+        9. Iterate over the rows of the `corrected_matches_df` DataFrame.
+            - Check if the `tst_testName` is 'N/A' and if the `prod_testName` is not in the `missing_test` list.
+            - If the conditions are met, update the 'TST_exceptions' column of the `corrected_matches_df` DataFrame.
+            - If the `prod_testName` is in the `mismatch_test` list, update the 'TST_exceptions' column with a specific message.
+        10. Drop the 'TSTTest' column from the `corrected_matches_df` DataFrame.
+        11. Return the `prod_test_mapping`, `missing_test`, and `corrected_matches_df` as the output.
+
         '''
         new_df, missing_test = self.frequency_table(df, column1, column2) # new_df.to_excel('Intermediate_match.xlsx')
         #new_df.to_excel('Intermediate_match.xlsx')
@@ -69,7 +107,7 @@ class bulkval:
         match_array = []
         for index, row in new_df.iterrows():
             max_val = row.max()
-            col_names = row[row == max_val].index.tolist()
+            col_names = row[row == max_val].index.tolist() # picking the column name with the max value
             if len(col_names) > 1: 
                 for col in col_names: 
                     tie_break_score = new_df[col].max()
@@ -113,11 +151,20 @@ class bulkval:
         return prod_test_mapping, missing_test, corrected_matches_df
 
     def remove_duplicates(self, df, missing_test):
-        '''
-        After doing the initial match based on frequency, we are going to look at the 
-        tests that have duplicate matches to PROD environment and filter out the best 
-        matches 
-        '''
+        """
+        Remove duplicates from the dataframe and create a mapping of Production ResultTest and 
+        TST ResultTest. After doing the initial match based on frequency, we are going to look at the 
+        tests that have duplicate matches to PROD environment and filter out the best matches 
+
+        Parameters:
+        - df: The dataframe to remove duplicates from.
+
+        Returns:
+        - df: The dataframe after removing duplicates.
+        - prod_tst_mapping: A dictionary mapping Production ResultTest to TST ResultTest.
+        - mismatch_test: A list of mismatched test results with the endings 'Final', 'Correction to results', and 'Preliminary'.
+        """
+
         final_pattern = r'^(?=.*?- Final\b).+'
         correction_results = r'^(?=.*?- Correction to results\b).+'
         preliminary = r'^(?=.*?- Preliminary\b).+'
@@ -158,7 +205,7 @@ class bulkval:
             ProdTest            TSTTest
         SARSCov2            SARS Coronavirus+Like SARS
         SARSCov2            Influenza Virus A 
-        ...                 ...
+                            ...
         It takes the most frequently seen unique pairs and makes a dictionary that will be used as
         a key to filter out tests that do not match 
         '''
@@ -197,7 +244,7 @@ class bulkval:
 
     def sanity_check(self, prod_df, tst_df, final_missing_report):
         '''
-        Function looks at the final missingn reports list and checks if any of the accession numbers in 
+        Function looks at the final missing reports list and checks if any of the accession numbers in 
         that list that are seen in combined TST message monitor (MM) exports. If there are it produces an 
         excel that is full of these lists and sees what the tests are labeled as in Combined Production MM
         
@@ -229,12 +276,17 @@ class bulkval:
         '''
         Function is made to make a missing test report from both tests seen in TST
         and not in PROD and visa versa. 
-        Parameter (tst_df): This is the TST combinded dataframe that already has the DILR_ResultTest
+        
+        Args: 
+            - tst_df: This is the TST combinded dataframe that already has the DILR_ResultTest
                             column already transformed after matching algorithm
-        Parameter (prod_df): This is just the combined dataframe from all of the prod message monitors
-        Parameter (prodTestMissingInTST): This is a list that is produced by test_match() that has
+            - prod_df: This is just the combined dataframe from all of the prod message monitors
+            - prodTestMissingInTST: This is a list that is produced by test_match() that has
                                         test types that are seen in PROD but not seen in TST. Produced 
                                         after matching algorithm.
+        Returns:
+            - missing_report_df: This is a dataframe that has all the missing test types from 
+                                 both TST and PROD
         '''
         # Unique Test Results seen in both TST and PROD 
         tst_unique = list(np.unique(tst_df['DILR_ResultTest']))
@@ -254,11 +306,41 @@ class bulkval:
         return missing_report_df
     
     def final_summary_reports(self, prod_df, tst_df):
+        """
+        Generate the final summary reports.
 
-        '''
-        Combining all other methods into one function to generate summary dataframes, which will be their
-        own sheet in the final excel report. 
-        '''
+        This function takes in two dataframes, `prod_df` and `tst_df`, representing data from the production environment
+        and the test environment, respectively. It performs the following operations to generate the final summary reports:
+
+        1. Merge the `tst_df` and `prod_df` dataframes on the 'DILR_AccessionNumber' column, creating a new merged dataframe.
+        This allows finding all the reports that have the same accession number in both environments.
+
+        2. Stack the tests together in the merge dataframe to identify the test names that are most frequently seen together.
+        These test names will be used as key-value pairs for transforming the 'DILR_ResultTest' in `tst_df` to match
+        the 'DILR_ResultTest' in the production environment.
+
+        3. Replace the 'DILR_ResultTest' in `tst_df` with the transformed values using the similarity key.
+
+        4. Perform a left join on the 'DILR_AccessionNumber' and 'DILR_ResultTest' columns between `tst_df` and `prod_df`.
+        This creates a new dataframe, `new_findings`, which contains the matches between the two dataframes.
+
+        5. Reset the index of the `new_findings` dataframe.
+
+        6. Create a missing test report by identifying the tests seen in the test environment (`tst_df`) but not seen in the
+        production environment (`prod_df`), as well as tests seen in the production environment but not seen in the test
+        environment.
+
+        7. Filter out the non-matching accession numbers from `prod_df` using the `new_findings` dataframe.
+
+        8. Perform a sanity check to identify if there are any 'ResultTests' marked as missing that are actually present in
+        the test environment (`tst_df`).
+
+        Returns:
+            tuple: A tuple containing the following:
+                - one2one_df (pandas.DataFrame): The dataframe with the matched test names from `tst_df` and `prod_df`.
+                - final_missing (pandas.DataFrame): The dataframe containing the missing test reports.
+                - missing_test_types (pandas.DataFrame): The dataframe containing the missing test types.
+        """
         # need to create a merged dataframe from both tst and prod environments so that I can find all of
         # the reports that have the same accession number in both environments 
         merged_df = pd.merge(
@@ -303,9 +385,41 @@ class bulkval:
         return one2one_df, final_missing, missing_test_types
 
     def report_builder(self, prod_df, tst_df):
-        '''
-        Method which puts all of the summary dataframes into one excel sheet
-        '''
+        """
+        Generates the validation reports for the given production and test dataframes.
+        
+        This function takes two pandas DataFrames, `prod_df` and `tst_df`, representing
+        the production and test data respectively. It performs the following steps:
+        
+        1. Calls the `final_summary_reports` method to obtain a list of initial missing
+        reports, tests seen in PROD but not TST, and a summary of tests that were
+        matched in TST but not in PROD.
+        
+        2. Builds an Excel sheet named after the `lab_name` attribute of the class,
+        replacing any non-alphanumeric characters with underscores, and creates a
+        `pandas.ExcelWriter` object.
+        
+        3. Writes the list of missing test types to the Excel sheet, in a sheet named
+        "Missing_TestTypes", starting from the first column.
+        
+        4. Writes the one-to-one matching summary to the Excel sheet, in a sheet named
+        "One2One_matches", starting from the first column.
+        
+        5. Writes the final list of missing reports to the Excel sheet, in a sheet named
+        "Tests in Prod not TST", starting from the first column.
+        
+        6. Closes the Excel writer object.
+        
+        Args:
+            prod_df (pandas.DataFrame): The production dataframe containing the reports from PROD environment.
+            tst_df (pandas.DataFrame): The test dataframe containing the reports frmo TST environment.
+        
+        Returns:
+            None
+        Raises:
+            None
+        """
+
         # getting list of initial missing reports, tests seen in PROD but not TST
         # and a summary of tests that were matched in TST but not prod 
         one2one_df, final_missing, missing_test_types = self.final_summary_reports(prod_df, tst_df)

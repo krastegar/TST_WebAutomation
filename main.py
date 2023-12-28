@@ -1,3 +1,26 @@
+#-------------------------------------------------------------------------------------------
+# 
+#   Purpose:
+#   Creating a program that will be able to take in RangeExports and IncomingMessageMonitor 
+#   Exports and automate making summary reports of the export files. 
+#   
+#   Algorithm:
+#       1. Find folder where .accdb file and message monitor (MM) excel files are located
+#       2. Create DB connection with TST range export (.accdb extension)      
+#       3. Extract data from TST range export and calculate completeness for specified fields
+#       4. Produce completeness report as an excel file called "completeness_report.xlsx"
+#       5. Combine all of the MM export from TST into a combined MM export, repeat this for PROD 
+#          exports
+#       6. Merge both combined dataframes and perform matching algorithm using test_match()
+#       7. Transform TST ResultTest types to there corresponding PROD test types based on matching
+#          algorithm
+#       8. Remove unseen test types in PROD that were not seen in TST and perform merge on DILR_ResultTest and DILR_AccessionNumber
+#       9. Subtract the ones that are seen both PROD and TST 
+#
+#   Author: Kiarash Rastegar
+#   Date: 2/27/23
+#-------------------------------------------------------------------------------------------
+
 import sys 
 
 from missing_reports import BulkVal
